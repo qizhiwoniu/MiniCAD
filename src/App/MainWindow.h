@@ -3,13 +3,9 @@
 #include <memory>  
 #include "Render/D3D11/Device.h"
 #include "Render/D3D11/SwapChain.h"
-#include "Render/D3D11/Renderer.h"
-#include "Render/Viewport/Viewport.h"
-#include "Editor/Editor.h"
-#include "Input/InputSystem.h"
-#include "Document/Document.h"
-#include "UI/UIManager.h"
-#include <imgui.h>
+#include "Render/D3D11/Renderer.h" 
+#include "Editor/Input/InputSystem.h" 
+#include "UI/UIManager.h" 
 #include "Document/DocumentManager.h"
 namespace MiniCAD
 {
@@ -20,8 +16,7 @@ namespace MiniCAD
 		MainWindow();
 		~MainWindow();
 		bool Initialize(const wchar_t* title, int width, int height);
-		void Run();
-
+		void Run(); 
 
 	private:
 		static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -42,15 +37,9 @@ namespace MiniCAD
 		std::unique_ptr<Device>       m_device;
 		std::unique_ptr<SwapChain>    m_swapChain;
 		std::unique_ptr<Renderer>     m_renderer;
-
-		// 
-	
-		//std::unique_ptr<Document>     m_document;
+		 
 		DocumentManager               m_docManager;
-		InputSystem                   m_inputSystem;
-
-		static bool                   s_needsRedraw;
-		// ── ImGui ──────────────────────
-		UIManager                     m_uiManager;
+		InputSystem                   m_inputSystem; 
+		UIManager                     m_uiManager; 
 	};
 }  

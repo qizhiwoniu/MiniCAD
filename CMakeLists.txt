@@ -22,15 +22,16 @@ add_library(Imgui
 target_include_directories(Imgui PUBLIC 
     thirdParty/imgui
     thirdParty/imgui/backends
-) 
-        
-include_directories("${CMAKE_SOURCE_DIR}/src"
-                    "${CMAKE_SOURCE_DIR}/thirdParty/stb")          # include 路径
+)  
 
-file(GLOB_RECURSE SRC  "${CMAKE_SOURCE_DIR}/src/*.cpp"  
-                       "${CMAKE_SOURCE_DIR}/src/*.hpp")   
+file(GLOB_RECURSE SRC  "${CMAKE_SOURCE_DIR}/src/*.cpp")   
 
 add_executable(MiniCAD  ${SRC} ) 
+
+target_include_directories(MiniCAD PRIVATE
+    "${CMAKE_SOURCE_DIR}/src"
+    "${CMAKE_SOURCE_DIR}/thirdParty"
+)
 
 target_link_libraries(MiniCAD  PRIVATE Imgui d3d11 dxgi D3DCompiler) 
 
@@ -39,22 +40,13 @@ set_target_properties(MiniCAD PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY_DEBUG   "${CMAKE_BINARY_DIR}/MiniCAD"
     RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/MiniCAD"
     VS_DEBUGGER_WORKING_DIRECTORY    "${CMAKE_BINARY_DIR}/MiniCAD"
-)
+)  
 
-file(GLOB_RECURSE ASSETS "${CMAKE_SOURCE_DIR}/src/*.hlsl") 
-
-if(ASSETS)
-     add_custom_command(TARGET MiniCAD  POST_BUILD           
-                 COMMAND ${CMAKE_COMMAND} -E copy_if_different  ${ASSETS}  "$<TARGET_FILE_DIR:MiniCAD>"
-                 COMMENT "Copy assets for MiniCAD"
-     )  
- endif()
-# 把 icons 复制到 MiniCAD icons
-file(GLOB_RECURSE ASSETS_ICONS "${CMAKE_SOURCE_DIR}/assets/icons/*")
-if(ASSETS_ICONS)
-    add_custom_command(TARGET MiniCAD POST_BUILD    
-        COMMAND ${CMAKE_COMMAND} -E make_directory                     $<TARGET_FILE_DIR:MiniCAD>/icons           
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ASSETS_ICONS}  $<TARGET_FILE_DIR:MiniCAD>/icons
-        COMMENT "Copying assets icons for MiniCAD"
+if(EXISTS "${CMAKE_SOURCE_DIR}/assets")
+    add_custom_command(TARGET MiniCAD POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${CMAKE_SOURCE_DIR}/assets"
+                "$<TARGET_FILE_DIR:MiniCAD>"
+        COMMENT "Copy assets contents for MiniCAD"
     )
 endif()

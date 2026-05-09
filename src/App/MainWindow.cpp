@@ -1,12 +1,10 @@
-#include "MainWindow.h"
-#include "imgui_internal.h" 
-#include <dwmapi.h>
-#include <ErrorReporter.h>
-#include "imgui.h"  
+#include "MainWindow.h"  
 #include "Document/DocumentManager.h"
+#include "Render/D3D11/SwapChain.h"
+#include <imgui.h>  
+#include <dwmapi.h>
 #include <cstdint>
 #include <memory>
-#include <Render/D3D11/SwapChain.h>
 
 #pragma comment(lib, "dwmapi.lib")
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -177,17 +175,7 @@ namespace MiniCAD
 
 		// 4.更新窗口
 		UpdateWindow(m_hwnd);
-
-		// 注册错误处理器
-		SetErrorHandler([this](const std::string& msg)
-			{
-				int len = MultiByteToWideChar(CP_UTF8, 0, msg.c_str(), -1, nullptr, 0);
-				std::wstring wmsg(len, 0);
-				MultiByteToWideChar(CP_UTF8, 0, msg.c_str(), -1, wmsg.data(), len);
-				MessageBox(m_hwnd, wmsg.c_str(), L"Error", MB_OK | MB_ICONERROR);
-			}); 
-
-
+		 
 		return m_hwnd != nullptr; 
 	}
 

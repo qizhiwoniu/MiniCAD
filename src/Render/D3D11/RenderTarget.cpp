@@ -1,5 +1,6 @@
 #include "RenderTarget.h"
 #include <d3d11.h>
+#include <dxgiformat.h>
 namespace MiniCAD
 {
     void RenderTarget::Create(ID3D11Device* device, int width, int height)

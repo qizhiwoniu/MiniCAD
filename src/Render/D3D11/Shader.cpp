@@ -1,4 +1,11 @@
+#include "pch.h"
 #include "Shader.h"
+#include <d3dcompiler.h>
+#include <format>
+#include <wrl/client.h>
+#include <cstdio>
+#include <d3dcommon.h>
+#include <d3d11.h>
 namespace MiniCAD
 {
     ShaderProgram CreateShader(ID3D11Device* device, const wchar_t* file)
@@ -14,8 +21,8 @@ namespace MiniCAD
                     std::string details = errorBlob
                         ? static_cast<const char*>(errorBlob->GetBufferPointer())
                         : std::format("HRESULT=0x{:08X}", static_cast<unsigned int>(hr));
-
-                    ReportError(std::format("Shader compile failed: {} [{} -> {}]", details, entry, target));
+                    auto msg = std::format("Shader compile failed: {} [{} -> {}]", details, entry, target);
+                    printf("Error %s", msg.c_str());
                 }
             };
 
@@ -23,7 +30,7 @@ namespace MiniCAD
         compileShader("PSMain", "ps_5_0", psBlob.GetAddressOf());
 
         device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, sp.vs.GetAddressOf());
-        device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, sp.ps.GetAddressOf());
+        device->CreatePixelShader (psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, sp.ps.GetAddressOf());
 
         sp.vsBlob = vsBlob;  // 注意保存 vsBlob，因为 InputLayout 需要用到它
 

@@ -5,6 +5,7 @@
 #include <span>
 #include <DirectXMath.h>
 #include <wrl/client.h>
+#include <d3d11.h>
 
 namespace MiniCAD
 {

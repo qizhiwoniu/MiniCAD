@@ -1,10 +1,10 @@
 #pragma once
 #include "pch.h"
-#include "ErrorReporter.h"
-#include <d3dcompiler.h>
 #include <wrl/client.h>
 #include <DirectXMath.h>
-#include <format>
+#include <d3d11.h>
+#include <d3dcommon.h>
+#include <Windows.h>
 using  Microsoft::WRL::ComPtr;
 using namespace DirectX;
 
@@ -49,8 +49,9 @@ namespace MiniCAD
     {
     public:
         void Initialize(ID3D11Device* device)
-        {
-            m_shader = CreateShader(device, L"Line.hlsl");
+        { 
+
+            m_shader = CreateShader(device, L"./shader/Line.hlsl");
 
             D3D11_INPUT_ELEMENT_DESC desc[] =
             {
@@ -83,7 +84,7 @@ namespace MiniCAD
     public:
         void Initialize(ID3D11Device* device)
         {
-            m_shader = CreateShader(device, L"Grip.hlsl");
+            m_shader = CreateShader(device, L"./shader/Grip.hlsl");
 
             D3D11_INPUT_ELEMENT_DESC desc[] =
             {
@@ -107,8 +108,7 @@ namespace MiniCAD
 
     private:
         ShaderProgram             m_shader;
-        ComPtr<ID3D11InputLayout> m_layout;
+        ComPtr<ID3D11InputLayout> m_layout; 
 
-    };
-
+    }; 
 }

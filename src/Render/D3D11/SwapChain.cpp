@@ -1,4 +1,8 @@
 ﻿#include "SwapChain.h"
+#include "Device.h"
+#include <wrl/client.h>
+#include <dxgi1_2.h>
+#include <pch.h>
 
 using Microsoft::WRL::ComPtr;
 

@@ -1,6 +1,7 @@
 #include "Renderer.h" 
 #include "Shader.h"
 #include "RenderTarget.h"
+#include <d3d11.h>
 
 namespace MiniCAD
 {
