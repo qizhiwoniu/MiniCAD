@@ -16,11 +16,12 @@ namespace MiniCAD
     class PointTool : public ITool
     {
     public:
-        PointTool(Scene& scene, CommandStack& cmdStack, Viewport& viewport, Overlay& overlay)
+        PointTool(Scene& scene, CommandStack& cmdStack, Viewport& viewport, Overlay& overlay, LayerID layerID)
             : m_scene(scene)
             , m_cmdStack(cmdStack)
             , m_viewport(viewport)
             , m_overlay(overlay)
+            , m_layerID(layerID)
         {
             printf("[PointTool] 左键放点 | 右键退出\n");
         }
@@ -97,7 +98,7 @@ namespace MiniCAD
             auto id = m_scene.NextObjectID();
 
             auto pointEntity = std::make_unique<PointEntity>(id, p);
-
+            pointEntity->SetLayerId(m_layerID);  // ← 加这一行
             auto cmd = std::make_unique<AddEntityCommand>(std::move(pointEntity));
             m_cmdStack.Execute(std::move(cmd), m_scene);
 
@@ -109,5 +110,6 @@ namespace MiniCAD
         CommandStack& m_cmdStack;
         Viewport&     m_viewport;
         Overlay&      m_overlay;
+        LayerID       m_layerID = Layer::DefaultLayerID;
     };
 }

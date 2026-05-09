@@ -3,6 +3,8 @@
 #include "Core/Entity/LineEntity.hpp"
 #include "Core/Entity/PointEntity.hpp"
 #include "Core/Object/Object.hpp"
+#include "Core/Entity/Entity.hpp"
+#include "Scene/Layer.h"
 #include <vector> 
 #include <memory>
 #include <utility>
@@ -126,6 +128,13 @@ namespace MiniCAD
 
         m_scene.ForEachObject([&](const Object& obj)
             {
+                const Layer* layer = nullptr;
+                if (obj.IsKindOf<Entity>())
+                {
+                    const auto& ent = static_cast<const Entity&>(obj);
+                    layer = m_scene.GetLayerManager().GetLayer(ent.GetLayerID());
+                    if (layer && !layer->IsVisible()) return; // 隐藏则跳过
+                }
                 if (obj.IsKindOf<LineEntity>())  // 线
                 {
                     const auto& line = static_cast<const LineEntity&>(obj);
@@ -136,12 +145,19 @@ namespace MiniCAD
 
                     const bool isSelected = selectionIds.contains(id);
                     const bool isHovered = hoverIds.contains(id);
-
+                    // ── 颜色：优先用图层颜色 ──────────────────
+                    DirectX::XMFLOAT4 drawColor = attr.Color;
+                    if (layer)
+                        drawColor = layer->GetColor();
+                    printf("Render doc=%p LayerID=%u color=(%.2f,%.2f,%.2f)\n",
+                        (void*)layer,
+                        static_cast<const Entity&>(obj).GetLayerID(),
+                        drawColor.x, drawColor.y, drawColor.z);
                     // ===== Base：只画普通 =====
                     if (!isSelected && !isHovered)
                     {
-                        m_sceneVertices.push_back({ geom.Start, attr.Color });
-                        m_sceneVertices.push_back({ geom.End,   attr.Color });
+                        m_sceneVertices.push_back({ geom.Start, drawColor });
+                        m_sceneVertices.push_back({ geom.End,   drawColor });
                     }
 
                     // ===== Overlay：画高亮 =====
@@ -164,7 +180,10 @@ namespace MiniCAD
                     const auto id         = obj.GetID(); 
                     const bool isSelected = selectionIds.contains(id);
                     const bool isHovered  = hoverIds.contains(id);
-
+                    // ── 颜色：优先用图层颜色 ──────────────────
+                    DirectX::XMFLOAT4 drawColor = attr.Color;
+                    if (layer)
+                        drawColor = layer->GetColor();
                     // 绘制为十字
                     const float s = 0.2f;
                     auto        p = geom.Position;
@@ -172,11 +191,11 @@ namespace MiniCAD
                     // ===== Base：只画普通 =====
                     if (!isSelected && !isHovered)
                     {  
-                        m_sceneVertices.push_back({ {p.x - s ,p.y,p.z}, attr.Color });
-                        m_sceneVertices.push_back({ {p.x + s ,p.y,p.z}, attr.Color });
+                        m_sceneVertices.push_back({ {p.x - s ,p.y,p.z}, drawColor });
+                        m_sceneVertices.push_back({ {p.x + s ,p.y,p.z}, drawColor });
 
-                        m_sceneVertices.push_back({ {p.x  ,p.y - s,p.z}, attr.Color });
-                        m_sceneVertices.push_back({ {p.x  ,p.y + s,p.z}, attr.Color });
+                        m_sceneVertices.push_back({ {p.x  ,p.y - s,p.z}, drawColor });
+                        m_sceneVertices.push_back({ {p.x  ,p.y + s,p.z}, drawColor });
                     }
 
                     // ===== Overlay：画高亮 =====

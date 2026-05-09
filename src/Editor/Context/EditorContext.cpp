@@ -211,7 +211,7 @@ namespace MiniCAD
         m_picking.MarkDirty();   
         m_gripEditor.ReBuildGrip(); // 重建夹点
 
-        m_tool = std::make_unique<LineTool>(m_scene, m_cmdStack, m_viewport, m_overlay);
+        m_tool = std::make_unique<LineTool>(m_scene, m_cmdStack, m_viewport, m_overlay, m_activeLayerID);
         m_tool->OnFinished = [this]()
             {
                 m_overlay.Clear();
@@ -236,7 +236,7 @@ namespace MiniCAD
         m_picking.MarkDirty();
         m_gripEditor.ReBuildGrip(); // 重建夹点
 
-        m_tool = std::make_unique<PointTool>(m_scene, m_cmdStack, m_viewport, m_overlay);
+        m_tool = std::make_unique<PointTool>(m_scene, m_cmdStack, m_viewport, m_overlay, m_activeLayerID);
         m_tool->OnFinished = [this]()
             {
                 m_overlay.Clear();

@@ -2,9 +2,11 @@
 #include "Document/DocumentManager.h"
 #include "Render/D3D11/SwapChain.h"
 #include <imgui.h>  
+#include "imgui_internal.h"
 #include <dwmapi.h>
 #include <cstdint>
 #include <memory>
+#include <windowsx.h>
 
 #pragma comment(lib, "dwmapi.lib")
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -246,14 +248,43 @@ namespace MiniCAD
 			if (bottom) return HTBOTTOM;
 
 			// 标题栏拖动
-			if (pt.y >= wr.top && pt.y < wr.top + 30)
+			/*if (pt.y >= wr.top && pt.y < wr.top + 30)
 			{
 				if (ImGui::GetCurrentContext() && ImGui::IsAnyItemHovered())
 					return HTCLIENT;
 
 				return HTCAPTION;
-			}
+			}*/
+			if (pt.y >= wr.top && pt.y < wr.top + 30)
+			{
+				if (ImGui::GetCurrentContext())
+				{
+					// 转为客户区坐标
+					POINT clientPt = pt;
+					ScreenToClient(hwnd, &clientPt);
+					ImVec2 mousePos = ImVec2((float)clientPt.x, (float)clientPt.y);
 
+					// 遍历所有 ImGui 窗口，检查鼠标是否在某个非主窗口上
+					ImGuiContext* ctx = ImGui::GetCurrentContext();
+					for (int i = 0; i < ctx->Windows.Size; i++)
+					{
+						ImGuiWindow* win = ctx->Windows[i];
+						if (!win->Active || win->Hidden)                       continue;
+						if (win->Flags & ImGuiWindowFlags_ChildWindow)         continue;
+						if (strcmp(win->Name, "MiniCAD") == 0)                 continue;
+
+						ImRect rect(win->Pos, ImVec2(win->Pos.x + win->Size.x,
+							win->Pos.y + win->Size.y));
+						if (rect.Contains(mousePos))
+							return HTCLIENT; // 鼠标在 ImGui 浮动窗口上，不拖主窗口
+					}
+
+					if (ImGui::IsAnyItemHovered())
+						return HTCLIENT;
+				}
+
+				return HTCAPTION;
+			}
 			return HTCLIENT;
 		}
 		case WM_GETMINMAXINFO:

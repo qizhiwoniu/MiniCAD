@@ -8,6 +8,7 @@
 #include "Editor/Grip/GripEditor.h"
 #include "Editor/Input/InputEvent.h"
 #include "Scene/Scene.h"
+#include "Scene/Layer.h"
 #include "Document/CommandStack/CommandStack.h" 
 #include "Core/GeomKernel/Line.hpp"
 #include "Core/Object/Object.hpp"
@@ -75,7 +76,8 @@ namespace MiniCAD
 		void Undo();
 		void Redo();
 		void ExecuteCommand(std::unique_ptr<ICommand> cmd); 
-	
+		LayerID GetActiveLayerID() const { return m_activeLayerID; }
+		void    SetActiveLayerID(LayerID id) { m_activeLayerID = id; }
 	private:
 		bool          HandleGlobal(const InputEvent& e);
 		bool          HandleDefault(const InputEvent& e); 
@@ -83,7 +85,7 @@ namespace MiniCAD
 		void          UpdateSnap(const InputEvent& e);        // 更新捕获点currentSnap
 		InputEvent    InjectSnap(const InputEvent& e);        // 注入捕获点 
 		InputEvent    ApplyConstraints(const InputEvent& e);  // 约束事件
-
+		LayerID m_activeLayerID = Layer::DefaultLayerID;
 	private:
 		std::unique_ptr<ITool>   m_tool;
 		Scene&                   m_scene;            

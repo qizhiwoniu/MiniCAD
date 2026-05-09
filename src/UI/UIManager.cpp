@@ -4,6 +4,9 @@
 #include "Document/Document.h"
 #include "Document/DocumentManager.h"
 #include "Editor/Input/InputEvent.h"
+#include "Scene/LayerManager.h"
+#include "Scene/Layer.h"
+#include "Core/Entity/Entity.hpp"
 #include <memory>
 #include <vector>
 #include <filesystem>
@@ -156,7 +159,7 @@ namespace MiniCAD
 
         ImGuiIO& io = ImGui::GetIO();   
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-
+        io.ConfigWindowsMoveFromTitleBarOnly = true;  // 👈 加这行
         io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/msyh.ttc", 16.f, nullptr, io.Fonts->GetGlyphRangesChineseFull());  
         ImGui::StyleColorsDark();
         
@@ -212,7 +215,9 @@ namespace MiniCAD
 
         ImGuiID dockspace_id = ImGui::GetID("MainDockSpace");
         ImGui::DockSpace(dockspace_id, ImVec2(0, 0), ImGuiDockNodeFlags_PassthruCentralNode); 
-        ImGui::End();
+        ImGui::End(); 
+
+        ShowLayerManager(dm);
     }
   
     void UIManager::DrawMenubar(DocumentManager& dm)
@@ -265,11 +270,12 @@ namespace MiniCAD
             if (ImGui::MenuItem("重做", "Ctrl+Y")) { dm.Redo(); }
             if (ImGui::MenuItem("粘贴(P)", "Ctrl+V")) { dm.Paste(); }
             if (ImGui::MenuItem("复制(C)", "Ctrl+C")) { dm.CopySelected(); }
-            ImGui::EndMenu();
+            ImGui::EndMenu();   
         }
 
         if (ImGui::BeginMenu("修改"))
         {
+            if (ImGui::MenuItem("图层", "Layer")) { m_showLayerMgr = true; }
             if (ImGui::MenuItem("阵列", "Array")) {}
             if (ImGui::MenuItem("移动", "Move")) {}
             if (ImGui::MenuItem("镜像", "Mirror")) {}
@@ -649,6 +655,224 @@ namespace MiniCAD
         ImGui::PopStyleVar();
     } 
 
+    void UIManager::ShowLayerManager(DocumentManager& dm)
+    {
+        if (!m_showLayerMgr) return;
+
+        Document* doc = dm.GetActive();
+        if (!doc) { m_showLayerMgr = false; return; }
+
+        LayerManager& lm = doc->GetLayerManager();
+        EditorContext& editor = doc->GetEditor();
+
+        ImGui::SetNextWindowPos(ImVec2(200, 200), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(440, 400), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSizeConstraints(ImVec2(300, 250), ImVec2(700, 800));
+
+        std::string title = "图层管理器 - " + doc->GetName();
+        if (!ImGui::Begin(title.c_str(), &m_showLayerMgr,
+            ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoDocking))
+        {
+            ImGui::End();
+            return;
+        }
+
+        // ── 工具栏 ──────────────────────────────────────
+        if (ImGui::Button("  +  新建  "))
+        {
+            static int counter = 1;
+            char buf[32];
+            snprintf(buf, sizeof(buf), "图层 %d", counter++);
+            lm.AddLayer(buf);
+        }
+        ImGui::SameLine();
+
+        LayerID activeID = editor.GetActiveLayerID();
+        bool canDelete = (activeID != Layer::DefaultLayerID);
+
+        if (!canDelete) ImGui::BeginDisabled();
+        if (ImGui::Button("  删除  "))
+        {
+            lm.RemoveLayer(activeID);
+            editor.SetActiveLayerID(Layer::DefaultLayerID);
+            lm.SetActiveLayerID(Layer::DefaultLayerID);
+        }
+        if (!canDelete) ImGui::EndDisabled();
+
+        ImGui::Separator();
+
+        // ── 表头 ────────────────────────────────────────
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+        ImGui::Text("  %-6s %-6s %-8s %s", "可见", "锁定", "颜色", "图层名");
+        ImGui::PopStyleColor();
+        ImGui::Separator();
+
+        // ── 图层列表 ────────────────────────────────────
+        float listHeight = -ImGui::GetFrameHeightWithSpacing() - 6.f;
+        ImGui::BeginChild("##LayerList", ImVec2(0.f, listHeight), true);
+
+        auto ids = lm.GetAllLayerIDs();
+        std::sort(ids.rbegin(), ids.rend()); // 倒序，新图层在上
+
+        for (LayerID id : ids)
+        {
+            Layer* layer = lm.GetLayer(id);
+            if (!layer) continue;
+
+            ImGui::PushID((int)id);
+
+            bool isActive = (id == editor.GetActiveLayerID());
+
+            // 激活行高亮
+            if (isActive)
+            {
+                ImVec2 rowMin = ImGui::GetCursorScreenPos();
+                ImVec2 rowMax = ImVec2(rowMin.x + ImGui::GetContentRegionAvail().x,
+                    rowMin.y + ImGui::GetFrameHeightWithSpacing());
+                ImGui::GetWindowDrawList()->AddRectFilled(
+                    rowMin, rowMax, IM_COL32(60, 100, 180, 80));
+            }
+
+            // 可见性按钮
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1, 1, 1, 0.1f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1, 1, 1, 0.2f));
+
+            if (ImGui::SmallButton(layer->IsVisible() ? " * " : " _ "))
+            {
+                layer->SetVisible(!layer->IsVisible());
+                doc->GetScene().MarkDirty();
+                doc->GetEditor().GetGipEditor().MarkDirty(); // ← 加这行，刷新夹点
+            }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip(layer->IsVisible() ? "点击隐藏" : "点击显示");
+            ImGui::SameLine();
+
+            // 锁定按钮
+            if (ImGui::SmallButton(layer->IsLocked() ? " L " : " U "))
+                layer->SetLocked(!layer->IsLocked());
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip(layer->IsLocked() ? "已锁定，点击解锁" : "点击锁定");
+
+            ImGui::PopStyleColor(3);
+            ImGui::SameLine();
+
+            // 颜色选择器
+            float col[4] = {
+                layer->GetColor().x, layer->GetColor().y,
+                layer->GetColor().z, layer->GetColor().w
+            };
+            if (ImGui::ColorEdit4("##col", col,
+                ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_AlphaBar))
+            {
+                layer->SetColor({ col[0], col[1], col[2], col[3] });
+                doc->GetScene().MarkDirty();
+                printf("SetColor doc=%p LayerID=%u color=(%.2f,%.2f,%.2f)\n",
+                    (void*)layer , layer->GetID(), col[0], col[1], col[2]);
+            }
+            ImGui::SameLine();
+
+            // 图层名（单击选中，双击重命名）
+            if (ImGui::Selectable(layer->GetName().c_str(), isActive,
+                ImGuiSelectableFlags_AllowDoubleClick))
+            {
+                editor.SetActiveLayerID(id);
+                lm.SetActiveLayerID(id);
+
+                if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+                    ImGui::OpenPopup("##RenameLayer");
+            }
+
+            // 右键菜单
+            if (ImGui::BeginPopupContextItem("##LayerCtx"))
+            {
+                if (ImGui::MenuItem("设为当前层"))
+                {
+                    editor.SetActiveLayerID(id);
+                    lm.SetActiveLayerID(id);
+                }
+                if (ImGui::MenuItem("重命名"))
+                    ImGui::OpenPopup("##RenameLayer");
+                ImGui::Separator();
+                if (ImGui::MenuItem(layer->IsVisible() ? "隐藏图层" : "显示图层"))
+                {
+                    layer->SetVisible(!layer->IsVisible());
+                    doc->GetScene().MarkDirty();
+                }
+                if (ImGui::MenuItem(layer->IsLocked() ? "解锁图层" : "锁定图层"))
+                    layer->SetLocked(!layer->IsLocked());
+                if (id != Layer::DefaultLayerID)
+                {
+                    ImGui::Separator();
+                    if (ImGui::MenuItem("删除图层"))
+                    {
+                        lm.RemoveLayer(id);
+                        if (editor.GetActiveLayerID() == id)
+                        {
+                            editor.SetActiveLayerID(Layer::DefaultLayerID);
+                            lm.SetActiveLayerID(Layer::DefaultLayerID);
+                        }
+                        doc->GetScene().MarkDirty();
+                        ImGui::EndPopup();
+                        ImGui::PopID();
+                        break;
+                    }
+                }
+                ImGui::EndPopup();
+            }
+
+            // 重命名弹窗
+            if (ImGui::BeginPopup("##RenameLayer"))
+            {
+                static char nameBuf[64] = {};
+                if (ImGui::IsWindowAppearing())
+                    strncpy_s(nameBuf, layer->GetName().c_str(), sizeof(nameBuf) - 1);
+
+                ImGui::Text("重命名图层:");
+                ImGui::SetNextItemWidth(220.f);
+                bool confirm = ImGui::InputText("##RenameInput", nameBuf, sizeof(nameBuf),
+                    ImGuiInputTextFlags_EnterReturnsTrue);
+                ImGui::SameLine();
+                confirm |= ImGui::Button("确认");
+                if (confirm && strlen(nameBuf) > 0)
+                {
+                    layer->SetName(nameBuf);
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
+
+            ImGui::PopID();
+        }
+
+        ImGui::EndChild();
+
+        // ── 状态栏 + 移动选中到当前层 ───────────────────
+        ImGui::Separator();
+        if (auto* active = lm.GetLayer(editor.GetActiveLayerID()))
+            ImGui::TextDisabled("当前层: %s   共 %d 层",
+                active->GetName().c_str(), (int)ids.size());
+
+        auto selected = editor.GetSelectedObjects();
+        if (!selected.empty())
+        {
+            ImGui::SameLine();
+            if (ImGui::Button("移动选中到此层"))
+            {
+                for (auto* obj : selected)
+                {
+                    if (obj->IsKindOf<Entity>())
+                        static_cast<Entity*>(obj)->SetLayerId(editor.GetActiveLayerID());
+                }
+                doc->GetScene().MarkDirty();
+            }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("将选中的 %d 个对象移动到当前图层", (int)selected.size());
+        }
+
+        ImGui::End();
+    }
+
     void UIManager::DrawStatusBar(DocumentManager& dm)
     {
         if (!dm.GetActive())
@@ -843,5 +1067,7 @@ namespace MiniCAD
 
         return (ImTextureID)srv;
     }
+
+   
 
 }  

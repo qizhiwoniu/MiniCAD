@@ -55,7 +55,7 @@ namespace MiniCAD
         void DrawDocumentTabs(DocumentManager& dm);
         void DrawStatusBar   (DocumentManager& dm);
         void InitToolIcons   ();
-
+        void ShowLayerManager(DocumentManager& dm);  // 图层窗口渲染函数
         ImTextureID LoadTextureFromFile(const char* path);
 
     private:
@@ -69,5 +69,7 @@ namespace MiniCAD
         float                       m_captionButtonsScreenX = 0.f;
 
         std::unordered_map<std::string, ImTextureID> m_toolIcons;
+
+        bool               m_showLayerMgr = false;   // g_showLayerMgr 改为成员变量
     };
 }

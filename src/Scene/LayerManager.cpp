@@ -5,7 +5,9 @@ namespace MiniCAD
 {
     LayerManager::LayerManager()
     {
-        m_layers[Layer::DefaultLayerID] = std::make_unique<Layer>(Layer::DefaultLayerID, "Default");  // 默认图层
+        auto defaultLayer = std::make_unique<Layer>(Layer::DefaultLayerID, "Default");
+        defaultLayer->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f }); // 白色，可改成你想要的默认色
+        m_layers[Layer::DefaultLayerID] = std::move(defaultLayer);
     }
 
     LayerID LayerManager::AddLayer(const std::string& name)
