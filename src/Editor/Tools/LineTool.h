@@ -14,12 +14,11 @@ namespace MiniCAD
     class LineTool : public ITool
     {
     public:
-        LineTool(Scene& scene, CommandStack& cmdStack, Viewport& viewport, Overlay& overlay, LayerID layerID)
+        LineTool(Scene& scene, CommandStack& cmdStack, Viewport& viewport, Overlay& overlay )
             : m_scene(scene)
             , m_cmdStack(cmdStack)
             , m_viewport(viewport)
-            , m_overlay(overlay)
-            , m_layerID(layerID)
+            , m_overlay(overlay) 
         {
             printf("[LineTool] 左键起点 | 左键延续 | 右键结束段 | 空格继续 | ESC 退出\n");
         } 
@@ -91,7 +90,9 @@ namespace MiniCAD
             auto id = m_scene.NextObjectID();
 
             auto line = std::make_unique<LineEntity>(id, a, b);
-            line->SetLayerId(m_layerID);  // ← 加这一行
+			// 设置图层（关键）：新实体默认放在当前活动图层
+			auto layerId = m_scene.GetLayerManager().GetActiveLayerID(); 
+            line->SetLayerId(layerId);  
             auto cmd = std::make_unique<AddEntityCommand>(std::move(line));
             m_cmdStack.Execute(std::move(cmd), m_scene);
 
@@ -105,7 +106,6 @@ namespace MiniCAD
         Overlay&      m_overlay;  
         bool          m_hasStart = false;
         XMFLOAT3      m_start{};
-        XMFLOAT3      m_preview{};  // 动态预览（MiniCAD关键）
-        LayerID       m_layerID = Layer::DefaultLayerID;
+        XMFLOAT3      m_preview{};  // 动态预览（MiniCAD关键） 
     };
 }

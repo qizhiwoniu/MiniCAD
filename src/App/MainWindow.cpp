@@ -354,7 +354,7 @@ namespace MiniCAD
 		const auto& uiInput = m_uiManager.GetViewportInput();
 		if (!uiInput.Valid)
 			return;
-
+		
 		auto& viewport = doc->GetViewport();
 		if (viewport.GetWidth() != uiInput.Size.x || viewport.GetHight() != uiInput.Size.y)
 		{
