@@ -145,17 +145,22 @@ namespace MiniCAD
                     const auto& geom = line.GetLine();
 
                     const auto id = obj.GetID();
-
+                     
                     const bool isSelected = selectionIds.contains(id);
                     const bool isHovered = hoverIds.contains(id);
                     // ── 颜色：优先用图层颜色 ──────────────────
                     DirectX::XMFLOAT4 drawColor = attr.Color;
+					// 获取图层颜色（如果有图层的话）
+                    layer = m_scene.GetLayerManager().GetLayer(attr.LayerId);
                     if (layer)
+                    {
                         drawColor = layer->GetColor();
-                    printf("Render doc=%p LayerID=%u color=(%.2f,%.2f,%.2f)\n",
-                        (void*)layer,
-                        static_cast<const Entity&>(obj).GetLayerID(),
-                        drawColor.x, drawColor.y, drawColor.z);
+                    }
+
+                    //printf("Render doc=%p LayerID=%u color=(%.2f,%.2f,%.2f)\n",
+                    //    (void*)layer,
+                    //    static_cast<const Entity&>(obj).GetLayerID(),
+                    //    drawColor.x, drawColor.y, drawColor.z);
                     // ===== Base：只画普通 =====
                     if (!isSelected && !isHovered)
                     {
