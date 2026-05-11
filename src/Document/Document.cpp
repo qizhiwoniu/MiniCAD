@@ -56,7 +56,9 @@ namespace MiniCAD
     bool Document::Save()
     {
         if (!HasPath())
+        { 
             return false;
+        }
 
         return SaveToFile(m_path);
     }
@@ -75,6 +77,7 @@ namespace MiniCAD
     bool Document::SaveToFile(const std::string& path)
     {
         // TODO: Scene 序列化
+		printf("Saving to %s ... (not implemented)\n", path.c_str());
         m_dirty = false;
         return true;
     }
@@ -87,7 +90,7 @@ namespace MiniCAD
 
         // 判断是否需要绘制约束辅助线 
 
-        if (m_editor.GetGipEditor().IsDragging())
+        if (m_editor.GetGripEditor().IsDragging())
         {
             if (m_editor.IsOrthoEnabled()) // 1.正交 显示约束线
             {
@@ -97,7 +100,7 @@ namespace MiniCAD
             }
             else                          //  2.拖动 显示原来位置
             {
-                for (const auto& entry : m_editor.GetGipEditor().GetDragEntries())
+                for (const auto& entry : m_editor.GetGripEditor().GetDragEntries())
                 {
                     m_overlay.AddLine(entry.BaseLine.Start, entry.BaseLine.End, { 0.6, 0.6, 0.6,0.6 });
                 }
@@ -239,19 +242,19 @@ namespace MiniCAD
         // 最近点 
         vs.Snap.SnapType = static_cast<SnapDraw::Type>(m_currentSnap.SnapType);
         vs.Snap.Pos      = m_viewport.GetCamera().WorldToScreen(m_currentSnap.WorldPos); 
-		if (!m_editor.IsAcitveTool())  
+		if (!m_editor.IsActiveTool())
         {
             m_currentSnap = {};// 重置最近点
         }
         // 光标中间方框
-        vs.ShowCurrorBox = !m_editor.IsAcitveTool();
+        vs.ShowCurrorBox = !m_editor.IsActiveTool();
 
         // 夹点
         vs.ShowGizmo = true;
         if (vs.ShowGizmo)
         { 
-            auto& hoveredIdxs = m_editor.GetGipEditor().HoveredGrips();
-            auto& grips = m_editor.GetGipEditor().GetGrips();
+            auto& hoveredIdxs = m_editor.GetGripEditor().HoveredGrips();
+            auto& grips = m_editor.GetGripEditor().GetGrips();
 
             for (int i = 0; i < (int)grips.size(); ++i)
             {
