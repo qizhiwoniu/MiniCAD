@@ -78,7 +78,8 @@ namespace MiniCAD
         void StartCopyTool();
         void StartMirrorTool();
         void StartRotateTool();
-
+        // ────────────────────────────────────────────
+        void StartAxisGridTool();
         // ── 几何编辑工具便捷方法 ─────────────────────────────
         void StartTrimTool();
         void StartExtendTool();

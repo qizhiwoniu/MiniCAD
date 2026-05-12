@@ -32,7 +32,6 @@ namespace MiniCAD
             const char* tooltip;
             std::function<void(DocumentManager&)> onActivate;
         };
-         
         inline  ToolMeta kTools[] =
         {
             { Tool::Select,     "Cursor",  "选择 (Esc)"   , [](DocumentManager& dm) {}   },
@@ -49,6 +48,9 @@ namespace MiniCAD
             { Tool::Move,       "Move",    "移动 (mv)"     ,[](DocumentManager& dm) {dm.GetActive()->GetEditor().StartMoveTool(); }},
             { Tool::Mirror,     "Mirror",  "镜像 (mi)"     ,[](DocumentManager& dm) {dm.GetActive()->GetEditor().StartMirrorTool(); }},
             { Tool::Rotate,     "Rotate",  "旋转 (R)"      ,[](DocumentManager& dm) {dm.GetActive()->GetEditor().StartRotateTool(); }}, 
+            /*---------------------------------------------*/
+            { Tool::Layer,      "Layer",   "图层 (L)"      ,[](DocumentManager& dm) { }},
+            { Tool::AxisGrid,   "AxisGrid","一键轴网 (Ax)" ,[](DocumentManager& dm) {dm.GetActive()->GetEditor().StartAxisGridTool(); }},
             /*---------------------------------------------*/ 
             { Tool::Undo,       "Undo",    "撤销"          ,[](DocumentManager& dm) {dm.Undo();}},
             { Tool::Redo,       "Redo",    "重做"          ,[](DocumentManager& dm) {dm.Redo();}},
@@ -488,7 +490,7 @@ namespace MiniCAD
             ImGui::PopStyleColor(3); 
             ImGui::SameLine(); 
             // 分隔线
-            if (meta.id == Tool::Select || meta.id == Tool::Spline || meta.id == Tool::Rotate)
+            if (meta.id == Tool::Select || meta.id == Tool::Spline || meta.id == Tool::Rotate || meta.id == Tool::AxisGrid)
             {
                 ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
                 ImGui::SameLine();
@@ -1014,7 +1016,7 @@ namespace MiniCAD
           
         // ── 当前工具 ─────────────────────────────────────────────
         const char* toolNames[] = {
-            "选择", "直线", "圆", "矩形", "圆弧", "椭圆", "多段线", "样条曲线", "复制", "移动", "镜像", "旋转", "撤销", "重做"
+            "选择", "直线", "圆", "矩形", "圆弧", "椭圆", "多段线", "样条曲线", "复制", "移动", "镜像", "旋转", "图层","一键轴网","撤销", "重做"
         };
         ImGui::TextDisabled("工具:");
         ImGui::SameLine();
@@ -1131,6 +1133,8 @@ namespace MiniCAD
                 "icons/Rect.png",
                 "icons/Rotate.png",
                 "icons/Spline.png",
+                "icons/Axisgrid.png",
+                "icons/LayerClose.png",
                 "icons/Redo.png",
                 "icons/Undo.png",
         }; 

@@ -28,6 +28,9 @@ namespace MiniCAD
         Mirror,
         Rotate,
         /*-----*/
+		Layer,
+		AxisGrid,
+        /*-----*/
         Redo,
         Undo,
     };
@@ -35,7 +38,6 @@ namespace MiniCAD
     class UIManager
     {
     public:
-     
         bool Init(HWND hwnd, ID3D11Device* device, ID3D11DeviceContext* context);
         void Shutdown();
 
