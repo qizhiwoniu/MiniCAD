@@ -890,8 +890,8 @@ namespace MiniCAD
                 layer->SetColor({ col[0], col[1], col[2], col[3] });
                 doc->GetScene().MarkDirty();
 				// 颜色修改后，可能需要刷新夹点等依赖颜色的 UI 元素
-                printf("SetColor doc=%p LayerID=%u color=(%.2f,%.2f,%.2f)\n",
-                    (void*)layer , layer->GetID(), col[0], col[1], col[2]);
+                /*printf("SetColor doc=%p LayerID=%u color=(%.2f,%.2f,%.2f)\n",
+                    (void*)layer , layer->GetID(), col[0], col[1], col[2]);*/
             }
             ImGui::SameLine();
 
