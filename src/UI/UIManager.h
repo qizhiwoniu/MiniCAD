@@ -58,6 +58,7 @@ namespace MiniCAD
         void DrawStatusBar   (DocumentManager& dm);
         void InitToolIcons   ();
         void ShowLayerManager(DocumentManager& dm);  // 图层窗口渲染函数
+        void ShowAxisgridManager(DocumentManager& dm);
         ImTextureID LoadTextureFromFile(const char* path);
 
     private:
@@ -73,5 +74,6 @@ namespace MiniCAD
         std::unordered_map<std::string, ImTextureID> m_toolIcons;
 
         bool               m_showLayerMgr = false;   // g_showLayerMgr 改为成员变量
+        bool               m_showAxisGrid = false;
     };
 }
