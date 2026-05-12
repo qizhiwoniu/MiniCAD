@@ -248,7 +248,10 @@ namespace MiniCAD
     void EditorContext::StartCopyTool()   { ActivateToolById("Copy");   }
     void EditorContext::StartMirrorTool() { ActivateToolById("Mirror"); }
     void EditorContext::StartRotateTool() { ActivateToolById("Rotate"); }
-
+    // ─────────────────────────────────────────────────────────────
+    //  几何绘制工具便捷方法
+    // ─────────────────────────────────────────────────────────────
+    void EditorContext::StartAxisGridTool() { ActivateToolById("AxisGrid"); }
     // ─────────────────────────────────────────────────────────────
     //  几何编辑工具便捷方法
     // ─────────────────────────────────────────────────────────────
