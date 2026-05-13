@@ -35,8 +35,11 @@ namespace MiniCAD
     SnapResult SnapEngine::Query(const XMFLOAT2& sp, const Scene& scene, const Camera& cam,
         const std::unordered_set<Object::ObjectID>& exclude) const
     {
+        // 优先级：端点 > 中点 > 交点 > 垂足 > 最近点 > 网格
         if (EnableEndpoint) { auto r = TryEndpoint(sp, scene, cam, exclude); if (r.IsValid()) return r; }
         if (EnableMidpoint) { auto r = TryMidpoint(sp, scene, cam, exclude); if (r.IsValid()) return r; }
+        if (EnableIntersection) { auto r = TryIntersection(sp, scene, cam, exclude); if (r.IsValid()) return r; }
+        if (EnablePerpendicular) { auto r = TryPerpendicular(sp, scene, cam, exclude); if (r.IsValid()) return r; }
         if (EnableNearest)  { auto r = TryNearest (sp, scene, cam, exclude); if (r.IsValid()) return r; }
         if (EnableGrid)     return TryGrid(sp, cam);
         return {};
@@ -155,7 +158,113 @@ namespace MiniCAD
 
         return best;
     }
+    // ─── Intersection ─────────────────────────────────────────────────────────
+    // 两条线段（无限延长）的交点，结果必须落在两段的包围盒范围内才接受
+    SnapResult SnapEngine::TryIntersection(const XMFLOAT2& sp, const Scene& scene, const Camera& cam,
+        const std::unordered_set<Object::ObjectID>& exclude) const
+    {
+        // 收集所有线段
+        std::vector<const LineEntity*> lines;
+        scene.ForEachObject([&](const Object& obj)
+            {
+                if (exclude.contains(obj.GetID())) return;
+                if (obj.IsKindOf<LineEntity>())
+                    lines.push_back(static_cast<const LineEntity*>(&obj));
+            });
 
+        SnapResult best;
+        float bestDist = FLT_MAX;
+
+        // 枚举所有线对
+        for (size_t i = 0; i < lines.size(); ++i)
+            for (size_t j = i + 1; j < lines.size(); ++j)
+            {
+                const auto& A = lines[i]->GetLine();
+                const auto& B = lines[j]->GetLine();
+
+                // 线段 A: P = A.Start + t*(A.End - A.Start)
+                // 线段 B: Q = B.Start + u*(B.End - B.Start)
+                // 求 t, u 使 P == Q
+                float r_x = A.End.x - A.Start.x, r_y = A.End.y - A.Start.y;  // 方向 A
+                float s_x = B.End.x - B.Start.x, s_y = B.End.y - B.Start.y;  // 方向 B
+
+                float denom = r_x * s_y - r_y * s_x;   // r × s
+                if (std::fabs(denom) < 1e-8f) continue; // 平行或共线
+
+                float qp_x = B.Start.x - A.Start.x;
+                float qp_y = B.Start.y - A.Start.y;
+
+                float t = (qp_x * s_y - qp_y * s_x) / denom;  // (q-p) × s / (r × s)
+                float u = (qp_x * r_y - qp_y * r_x) / denom;  // (q-p) × r / (r × s)
+
+                // 两个参数都必须在 [0,1]，交点才在线段上
+                if (t < 0.f || t > 1.f || u < 0.f || u > 1.f) continue;
+
+                XMFLOAT3 wp = { A.Start.x + t * r_x, A.Start.y + t * r_y, 0.f };
+                float d = Dist2D(sp, cam.WorldToScreen(wp));
+                if (d < SnapRadiusPx && d < bestDist)
+                {
+                    bestDist = d;
+                    best = { SnapResult::Type::Intersection, wp, lines[i]->GetID() };
+                }
+            }
+
+        return best;
+    }
+
+
+    // ─── Perpendicular ────────────────────────────────────────────────────────
+    // 从鼠标位置向每条线段作垂线，捕捉垂足点
+    SnapResult SnapEngine::TryPerpendicular(const XMFLOAT2& sp, const Scene& scene, const Camera& cam,
+        const std::unordered_set<Object::ObjectID>& exclude) const
+    {
+        SnapResult best;
+        float bestDist = FLT_MAX;
+
+        XMFLOAT3 worldMouse = cam.ScreenToWorld(sp.x, sp.y);
+
+        scene.ForEachObject([&](const Object& obj)
+            {
+                if (exclude.contains(obj.GetID())) return;
+                if (!obj.IsKindOf<LineEntity>()) return;
+
+                auto* line = static_cast<const LineEntity*>(&obj);
+                auto& L = line->GetLine();
+
+                // 垂足 = 鼠标到线段（无限延长方向）的投影点
+                float dx = L.End.x - L.Start.x, dy = L.End.y - L.Start.y;
+                float lenSq = dx * dx + dy * dy;
+                if (lenSq < 1e-8f) return;
+                float len = std::sqrt(lenSq);
+
+                // 鼠标到直线（无限延长）的垂直距离（世界坐标）
+                float crossZ = (worldMouse.x - L.Start.x) * dy - (worldMouse.y - L.Start.y) * dx;
+                float distWorld = std::fabs(crossZ) / len;
+
+                // 把世界距离换算成屏幕像素距离来与 SnapRadiusPx 比较
+                // 用 cam.Scale() 获取缩放比，若无此接口则用近似：取两个世界点的屏幕距离
+                XMFLOAT2 refA = cam.WorldToScreen(L.Start);
+                XMFLOAT2 refB = cam.WorldToScreen({ L.Start.x + dx / len, L.Start.y + dy / len, 0.f });
+                float pixelsPerUnit = Dist2D(refA, refB);   // 1 个世界单位对应多少像素
+                float distPx = distWorld * pixelsPerUnit;
+
+                if (distPx > SnapRadiusPx) return;  // 鼠标离线太远，不吸附
+
+                // 计算垂足（投影到无限延长线上，不 clamp，CAD 标准行为）
+                float t = ((worldMouse.x - L.Start.x) * dx + (worldMouse.y - L.Start.y) * dy) / lenSq;
+                XMFLOAT3 foot = { L.Start.x + t * dx, L.Start.y + t * dy, 0.f };
+
+                // 以鼠标屏幕位置到垂足屏幕位置的距离作为 best 竞争依据
+                float d = Dist2D(sp, cam.WorldToScreen(foot));
+                if (distPx < bestDist)
+                {
+                    bestDist = distPx;
+                    best = { SnapResult::Type::Perpendicular, foot, obj.GetID() };
+                }
+            });
+
+        return best;
+    }
     // ─── Grid ─────────────────────────────────────────────────────────────────
     SnapResult SnapEngine::TryGrid(const XMFLOAT2& sp, const Camera& cam) const
     {

@@ -56,6 +56,7 @@ namespace MiniCAD
         , m_anchorLine({}, {})
     {
         RegisterBuiltinTools();
+        SetSnapMask(m_snapMask);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -623,6 +624,30 @@ namespace MiniCAD
 
     void EditorContext::ToggleSnap() { SetSnapEnabled(!m_snapEnabled); }
 
+    int  EditorContext::GetSnapMask()  const { return m_snapMask; }
+    void EditorContext::SetSnapMask(int mask)
+    {
+        
+        m_snapMask = mask;
+        // 把 bit 拆开，直接赋给 SnapEngine 的公开成员
+        m_snap.EnableEndpoint = (mask & (1 << 0)) != 0;
+        m_snap.EnableMidpoint = (mask & (1 << 1)) != 0;
+        m_snap.EnableIntersection = (mask & (1 << 3)) != 0;
+        m_snap.EnablePerpendicular = (mask & (1 << 4)) != 0;
+        // EnableCenter / Tangent 暂无实现，跳过
+        printf("[Snap] mask=0x%02X  Intersection=%d  Perp=%d\n",
+            mask, m_snap.EnableIntersection, m_snap.EnablePerpendicular);
+        // 断点打这里，或者：
+       
+    }
+
+    float EditorContext::GetSnapRadius() const { return m_snapRadius; }
+    void  EditorContext::SetSnapRadius(float r)
+    {
+        m_snapRadius = r;
+        m_snap.SnapRadiusPx = r;   // 直接赋值公开成员   // 同步给 SnapEngine
+        printf("[Editor] SnapRadius: %.1f\n", r);
+    }
     // ─────────────────────────────────────────────────────────────
     //  Undo / Redo / Command
     // ─────────────────────────────────────────────────────────────
