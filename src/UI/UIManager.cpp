@@ -1499,6 +1499,7 @@ namespace MiniCAD
         // 使用 ImGui 语义颜色（自动适配明暗主题）
         const ImVec4 colorActive = style.Colors[ImGuiCol_Text];
         const ImVec4 colorInactive = style.Colors[ImGuiCol_TextDisabled];
+        static bool s_openSnapSettings = false;  // 右键触发标记
         ImGui::BeginChild("status_snap", ImVec2(80, 0), false);
         {
 
@@ -1509,12 +1510,107 @@ namespace MiniCAD
             ImGui::TextColored(snapEnabled ? colorActive : colorInactive, snapEnabled ? "开 " : "关  ");
             ImGui::SetCursorPos(btnPos);
             ImGui::InvisibleButton("snap_toggle", ImVec2(80, ImGui::GetTextLineHeight()));
-            if (ImGui::IsItemClicked())
+            if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
             {
                 dm.GetActive()->GetEditor().ToggleSnap();
             }
+            if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+            {
+                s_openSnapSettings = true;  // 标记为需要打开弹窗
+            }
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::SetTooltip("左键切换捕捉开关\n右键打开捕捉设置");
+            }
         }
         ImGui::EndChild();
+
+        // ── 捕捉设置弹窗（在 EndChild 之后打开，保证 ID 栈正确）─────
+        if (s_openSnapSettings)
+        {
+            ImGui::OpenPopup("##SnapSettingsPopup");
+            s_openSnapSettings = false;
+        }
+        if (ImGui::BeginPopup("##SnapSettingsPopup", ImGuiWindowFlags_NoMove))
+        {
+            ImGui::TextDisabled("捕捉设置");
+            ImGui::Separator();
+
+            auto& editor = dm.GetActive()->GetEditor();
+
+            // ── 总开关 ────────────────────────────────────────
+            bool snapEnabled = editor.IsSnapEnabled();
+            if (ImGui::Checkbox("启用捕捉 (F3)", &snapEnabled))
+                editor.ToggleSnap();
+
+            ImGui::Separator();
+            ImGui::TextDisabled("捕捉类型");
+
+            // ── 各捕捉类型复选框 ──────────────────────────────
+            // 通过 Editor 的 SnapMask 控制；如果没有对应 API 可按需删减
+            // ── 捕捉类型位掩码定义（与 SnapEngine 保持一致）──
+            enum SnapMaskBits : int
+            {
+                SnapMask_Endpoint = 1 << 0,
+                SnapMask_Midpoint = 1 << 1,
+                SnapMask_Center = 1 << 2,
+                SnapMask_Intersection = 1 << 3,
+                SnapMask_Perpendicular = 1 << 4,
+                SnapMask_Tangent = 1 << 5,
+            };
+
+            auto snapMask = editor.GetSnapMask();
+
+            struct SnapItem { const char* label; int bit; bool implemented;};
+            static const SnapItem kSnapItems[] =
+            {
+                { "端点",   SnapMask_Endpoint,true},
+                { "中点",   SnapMask_Midpoint,true},
+                { "圆心",   SnapMask_Center, false},
+                { "交点",   SnapMask_Intersection,true},
+                { "垂足",   SnapMask_Perpendicular,false},
+                { "切点",   SnapMask_Tangent,false},
+
+            };
+
+            for (auto& item : kSnapItems)
+            {
+                if (!item.implemented)
+                {
+                    // 置灰，不可点击
+                    ImGui::BeginDisabled(true);
+                    bool dummy = false;
+                    ImGui::Checkbox(item.label, &dummy);
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("(未实现)");
+                    ImGui::EndDisabled();
+                    continue;
+                }
+                bool checked = (snapMask & item.bit) != 0;
+                if (ImGui::Checkbox(item.label, &checked))
+                {
+                    if (checked) snapMask |= item.bit;
+                    else         snapMask &= ~item.bit;
+                    editor.SetSnapMask(snapMask);
+                }
+            }
+
+            ImGui::Separator();
+
+            // ── 捕捉半径 ──────────────────────────────────────
+            float snapRadius = editor.GetSnapRadius();
+            ImGui::SetNextItemWidth(120.f);
+            if (ImGui::SliderFloat("捕捉半径", &snapRadius, 1.f, 30.f, "%.1f px"))
+                editor.SetSnapRadius(snapRadius);
+
+            ImGui::Spacing();
+            if (ImGui::Button("关闭", ImVec2(80, 0)))
+                ImGui::CloseCurrentPopup();
+
+            ImGui::EndPopup();
+        }
+
+
 
         ImGui::SameLine();
 

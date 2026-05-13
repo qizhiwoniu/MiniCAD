@@ -98,7 +98,10 @@ namespace MiniCAD
         bool IsSnapEnabled() const;
         void SetSnapEnabled(bool enabled);
         void ToggleSnap();
-
+        int   GetSnapMask()  const;
+        void  SetSnapMask(int mask);
+        float GetSnapRadius() const;
+        void  SetSnapRadius(float r);
         // ── Undo / Redo / Command ─────────────────────────────
         void Undo();
         void Redo();
@@ -139,6 +142,8 @@ namespace MiniCAD
 
         Line m_anchorLine;
         bool m_snapEnabled  = true;
+        int   m_snapMask = 0xFF;   // 新增：捕捉类型位掩码，默认全开
+        float m_snapRadius = 10.f;   // 新增：捕捉半径（屏幕像素）
         bool m_orthoEnabled = false;
          
         std::unordered_map<std::string,
