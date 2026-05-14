@@ -158,8 +158,8 @@ namespace MiniCAD
 
         return best;
     }
-
     // ─── Intersection ─────────────────────────────────────────────────────────
+    // 两条线段（无限延长）的交点，结果必须落在两段的包围盒范围内才接受
     SnapResult SnapEngine::TryIntersection(const XMFLOAT2& sp, const Scene& scene, const Camera& cam,
         const std::unordered_set<Object::ObjectID>& exclude) const
     {
@@ -212,7 +212,9 @@ namespace MiniCAD
         return best;
     }
 
+
     // ─── Perpendicular ────────────────────────────────────────────────────────
+
     SnapResult SnapEngine::TryPerpendicular(const XMFLOAT2& sp, const Scene& scene, const Camera& cam,
         const std::unordered_set<Object::ObjectID>& exclude) const
     {
@@ -256,8 +258,11 @@ namespace MiniCAD
                 float d = Dist2D(sp, cam.WorldToScreen(foot));
                 if (distPx < bestDist)
                 {
+<<<<<<<<< Temporary merge branch 1
+=========
 					 
                     // 不知道什么原因 垂足能一直进来
+>>>>>>>>> Temporary merge branch 2
                     bestDist = distPx;
                     best = { SnapResult::Type::Perpendicular, foot, obj.GetID() };
                 }
@@ -265,7 +270,7 @@ namespace MiniCAD
 
         return best;
     }
-   
+
     // ─── Grid ─────────────────────────────────────────────────────────────────
     SnapResult SnapEngine::TryGrid(const XMFLOAT2& sp, const Camera& cam) const
     {
