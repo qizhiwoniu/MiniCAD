@@ -258,11 +258,10 @@ namespace MiniCAD
                 float d = Dist2D(sp, cam.WorldToScreen(foot));
                 if (distPx < bestDist)
                 {
-<<<<<<<<< Temporary merge branch 1
-=========
+
 					 
                     // 不知道什么原因 垂足能一直进来
->>>>>>>>> Temporary merge branch 2
+
                     bestDist = distPx;
                     best = { SnapResult::Type::Perpendicular, foot, obj.GetID() };
                 }
