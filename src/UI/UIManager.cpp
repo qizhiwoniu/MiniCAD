@@ -262,7 +262,7 @@ namespace MiniCAD
             if (ImGui::MenuItem("打开", "Ctrl+O"))         { dm.Open(); }
             ImGui::Separator();
 
-            if (ImGui::MenuItem("保存",     "Ctrl+S"))         { dm.Save(); }
+            if (ImGui::MenuItem("保存",     "Ctrl+S"))         { dm.Save(); dm.m_lastSaveTime = ImGui::GetTime();}
             if (ImGui::MenuItem("另存为",   "Ctrl+Shift+S"))   { dm.SaveAs(); }
             if (ImGui::MenuItem("全部保存", "Ctrl+Alt+S"))     { dm.SaveAll(); }
 
@@ -292,7 +292,7 @@ namespace MiniCAD
             if (ImGui::MenuItem("旋转", "Rotate")) {}
             ImGui::EndMenu();
         }
-        auto& editor = dm.GetActive()->GetEditor();
+        //auto& editor = dm.GetActive()->GetEditor();
         /***auto* active = dm.GetActive();
         if (!active)
         {
@@ -303,23 +303,32 @@ namespace MiniCAD
         auto& editor = active->GetEditor();***/
         if (ImGui::BeginMenu("绘图"))
         {
-            if (ImGui::MenuItem("直线",     "Line"))      { editor.StartLineTool(); }
-            if (ImGui::MenuItem("点",       "Point"))     { editor.StartPointTool(); }
-            if (ImGui::MenuItem("矩形",     "Rectangle")) { editor.StartRectangleTool(); }
-            if (ImGui::MenuItem("圆",       "Circle"))    { editor.StartCircleTool(); }
-            if (ImGui::MenuItem("圆弧",     "Arc"))       { editor.StartArcTool(); }
-            if (ImGui::MenuItem("旋转",     "Rotate"))    { editor.StartRotateTool(); }
-            
-            ImGui::EndMenu();
+            auto* activeDoc = dm.GetActive();
+            if (activeDoc)
+            {
+                auto& editor = dm.GetActive()->GetEditor();
+                if (ImGui::MenuItem("直线", "Line")) { editor.StartLineTool(); }
+                if (ImGui::MenuItem("点", "Point")) { editor.StartPointTool(); }
+                if (ImGui::MenuItem("矩形", "Rectangle")) { editor.StartRectangleTool(); }
+                if (ImGui::MenuItem("圆", "Circle")) { editor.StartCircleTool(); }
+                if (ImGui::MenuItem("圆弧", "Arc")) { editor.StartArcTool(); }
+                if (ImGui::MenuItem("旋转", "Rotate")) { editor.StartRotateTool(); }
+
+                ImGui::EndMenu();
+            }
         }
 
         if (ImGui::BeginMenu("视图"))
         {
-            auto& viewport = dm.GetActive()->GetViewport();
-            static bool showGrid = true, showAxis = true, showGizmo = true;
-            ImGui::MenuItem("显示网格",   nullptr, &showGrid);   { viewport.ShowGrid(showGrid); }
-            ImGui::MenuItem("显示坐标轴", nullptr, &showAxis);   { viewport.ShowAxis(showAxis); }
-            ImGui::MenuItem("显示Gizmo",  nullptr, &showGizmo); { viewport.ShowGizmo(showGizmo); }
+            auto* activeDoc = dm.GetActive(); // ← 加判空
+            if (activeDoc)
+            {
+                auto& viewport = dm.GetActive()->GetViewport();
+                static bool showGrid = true, showAxis = true, showGizmo = true;
+                ImGui::MenuItem("显示网格", nullptr, &showGrid); { viewport.ShowGrid(showGrid); }
+                ImGui::MenuItem("显示坐标轴", nullptr, &showAxis); { viewport.ShowAxis(showAxis); }
+                ImGui::MenuItem("显示Gizmo", nullptr, &showGizmo); { viewport.ShowGizmo(showGizmo); }
+            }
             ImGui::EndMenu();
         }
         static bool showAbout = false;
@@ -426,7 +435,7 @@ namespace MiniCAD
             ImGui::Button("##close", ImVec2(btnW, 0.f));
             DrawCloseIcon(dl, RectCenter(ImGui::GetItemRectMin(), ImGui::GetItemRectSize()), iconSize, iconCol);
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("关闭");
-            if (ImGui::IsItemClicked()) PostMessage(m_hwnd, WM_CLOSE, 0, 0);
+            if (ImGui::IsItemClicked()) ShowWindow(m_hwnd, SW_MINIMIZE); //PostMessage(m_hwnd, WM_CLOSE, 0, 0);
             ImGui::PopStyleColor(2);
 
             ImGui::PopStyleColor(3);
@@ -546,6 +555,7 @@ namespace MiniCAD
      
     void UIManager::DrawDocumentTabs(DocumentManager& dm)
     {
+       
         m_viewportInput = {}; // 每帧重置（纯状态）
 
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
@@ -1617,17 +1627,21 @@ namespace MiniCAD
         // 正交状态
         ImGui::BeginChild("status_ortho", ImVec2(80, 0), false);
         {
-            bool orthoEnabled = dm.GetActive()->GetEditor().IsOrthoEnabled();
-
-            ImVec2 btnPos = ImGui::GetCursorPos();
-            ImGui::TextColored(orthoEnabled ? colorActive : colorInactive, "正交(F8): ");
-            ImGui::SameLine();
-            ImGui::TextColored(orthoEnabled ? colorActive : colorInactive, orthoEnabled ? "开 " : "关 ");
-            ImGui::SetCursorPos(btnPos);
-            ImGui::InvisibleButton("ortho_toggle", ImVec2(80, ImGui::GetTextLineHeight()));
-            if (ImGui::IsItemClicked())
+            auto* activeDoc = dm.GetActive();
+            if (activeDoc)
             {
-                dm.GetActive()->GetEditor().ToggleOrtho();
+                bool orthoEnabled = dm.GetActive()->GetEditor().IsOrthoEnabled();
+
+                ImVec2 btnPos = ImGui::GetCursorPos();
+                ImGui::TextColored(orthoEnabled ? colorActive : colorInactive, "正交(F8): ");
+                ImGui::SameLine();
+                ImGui::TextColored(orthoEnabled ? colorActive : colorInactive, orthoEnabled ? "开 " : "关 ");
+                ImGui::SetCursorPos(btnPos);
+                ImGui::InvisibleButton("ortho_toggle", ImVec2(80, ImGui::GetTextLineHeight()));
+                if (ImGui::IsItemClicked())
+                {
+                    dm.GetActive()->GetEditor().ToggleOrtho();
+                }
             }
         }
         ImGui::EndChild();
@@ -1641,13 +1655,26 @@ namespace MiniCAD
         if (active)
         {
             ImGui::TextUnformatted(active->GetName().c_str());
-            if (active->IsDirty())
-            {
-                ImGui::SameLine();
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 0.8f, 0.2f, 1.f));
-                ImGui::TextUnformatted("● 未保存");
-                ImGui::PopStyleColor();
-            }
+            float cooldown = 2.0f;
+
+            bool justSaved = (dm.m_lastSaveTime > 0) &&
+            (ImGui::GetTime() - dm.m_lastSaveTime) < cooldown;
+
+        if (justSaved)
+        {
+        float alpha = 1.0f - (float)((ImGui::GetTime() - dm.m_lastSaveTime) / cooldown);
+        ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 1.f, 0.4f, alpha));
+        ImGui::TextUnformatted("✓ 已保存");
+        ImGui::PopStyleColor();
+        }
+        else
+        {
+        ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 0.8f, 0.2f, 1.f));
+        ImGui::TextUnformatted("● 未保存");
+        ImGui::PopStyleColor();
+        }
         }
         else
         {

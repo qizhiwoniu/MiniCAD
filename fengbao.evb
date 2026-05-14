@@ -248,9 +248,12 @@
             <ActiveX>False</ActiveX>
             <ActiveXInstall>False</ActiveXInstall>
             <Action>0</Action>
-            <OverwriteDateTime>False</OverwriteDateTime>
-            <OverwriteAttributes>False</OverwriteAttributes>
-            <PassCommandLine>False</PassCommandLine>
+            <OverwriteDateTime>True</OverwriteDateTime>
+            <DateTime>2010-03-16T16:45:00.000Z</DateTime>
+            <OverwriteAttributes>True</OverwriteAttributes>
+            <Attributes>0</Attributes>
+            <PassCommandLine>True</PassCommandLine>
+            <CommandLine/>
             <HideFromDialogs>0</HideFromDialogs>
           </File>
           <File>

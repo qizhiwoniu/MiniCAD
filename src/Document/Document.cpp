@@ -9,6 +9,7 @@
 #include <memory>
 #include <utility>
 #include <fstream>
+#include <filesystem>
 namespace MiniCAD
 {
     Document::Document(Renderer& render, float width, float height)
@@ -56,6 +57,7 @@ namespace MiniCAD
 
     bool Document::Save()
     {
+
         if (!HasPath())
         { 
             return false;
@@ -77,6 +79,7 @@ namespace MiniCAD
 
     bool Document::SaveToFile(const std::string& path)
     {
+
         std::ofstream file(path, std::ios::binary);
         if (!file.is_open())
         {

@@ -152,14 +152,17 @@ namespace MiniCAD
 
     void DocumentManager::Save()
     {
-        if (m_active)
-        {
-            std::filesystem::path outputPath =
-                std::filesystem::current_path() / (m_active->GetName() + ".dwg");
+        if (!m_active) return; // ← 判空移到最前面
+
+        std::filesystem::path p = m_active->GetName();
+        if (p.extension() != ".dwg")
+            p.replace_extension(".dwg");
+
+        std::filesystem::path outputPath = std::filesystem::current_path() / p; // ← 用修正后的 p
 
             m_active->SetPath(outputPath.string());
             m_active->Save();
-        }
+        
     }
 
     void DocumentManager::SaveAs()

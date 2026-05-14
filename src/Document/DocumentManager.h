@@ -8,6 +8,7 @@ namespace MiniCAD
     class DocumentManager
     {  
     public:
+        double m_lastSaveTime = -999.0;
         DocumentManager() = default;
 
         Document& Create(Renderer& r, float w, float h);
