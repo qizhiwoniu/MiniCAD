@@ -34,7 +34,7 @@ target_include_directories(MiniCAD PRIVATE
     "${CMAKE_SOURCE_DIR}/thirdParty"
 )
 
-target_link_libraries(MiniCAD  PRIVATE Imgui d3d11 dxgi D3DCompiler comdlg32) 
+target_link_libraries(MiniCAD  PRIVATE Imgui d3d11 dxgi D3DCompiler comdlg32 Shell32) 
 
 set_target_properties(MiniCAD PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY         "${CMAKE_BINARY_DIR}/MiniCAD"

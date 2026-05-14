@@ -33,7 +33,6 @@ namespace MiniCAD
 	private:
 		// 窗口
 		HWND m_hwnd;
-
 		// ── D3D11 层（硬件资源）──────────────────────────────
 		std::unique_ptr<Device>       m_device;
 		std::unique_ptr<SwapChain>    m_swapChain;
