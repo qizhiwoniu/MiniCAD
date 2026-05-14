@@ -1,9 +1,15 @@
 #include "DocumentManager.h"
 #include "Document.h"
 #include "Render/D3D11/Renderer.h"
+#include "Core/Entity/PointEntity.hpp"
 #include <utility>
 #include <memory>
 #include <string>
+#include <filesystem>
+#include <windows.h>
+#include <commdlg.h>
+#include <fstream>
+
 namespace MiniCAD
 {
     Document& DocumentManager::Create(Renderer& r, float w, float h)
@@ -65,26 +71,122 @@ namespace MiniCAD
 
     void DocumentManager::Open()
     {
-		// 这里直接创建一个新文档，实际应用中应该弹出文件对话框让用户选择文件
-        // New();
-        printf("Open\n"); 
+        char filePath[MAX_PATH] = {};
+
+        OPENFILENAMEA ofn = {};
+        ofn.lStructSize = sizeof(ofn);
+        ofn.hwndOwner = nullptr;
+        ofn.lpstrFilter = "DWG Files (*.dwg)\0*.dwg\0All Files (*.*)\0*.*\0";
+        ofn.lpstrFile = filePath;
+        ofn.nMaxFile = MAX_PATH;
+        ofn.lpstrTitle = "Open DWG File";
+        ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+
+        if (!GetOpenFileNameA(&ofn))
+            return;
+
+        if (!m_renderer)
+            return;
+
+        std::ifstream file(filePath, std::ios::binary);
+        if (!file.is_open())
+        {
+            printf("Failed to open file: %s\n", filePath);
+            return;
+        }
+
+        Document& doc = Create(*m_renderer, m_defaultWidth, m_defaultHeight);
+        doc.SetPath(filePath);
+        Scene& scene = doc.GetScene();
+
+        int count = 0;
+        file.read((char*)&count, sizeof(count));
+
+        for (int i = 0; i < count; i++)
+        {
+            uint8_t type = 0;
+            file.read((char*)&type, sizeof(type));
+
+            Object::ObjectID id = 0;
+            file.read((char*)&id, sizeof(id));
+
+            if (type == 1) // LineEntity
+            {
+                XMFLOAT3 start, end;
+                bool isSegment;
+                file.read((char*)&start, sizeof(XMFLOAT3));
+                file.read((char*)&end, sizeof(XMFLOAT3));
+                file.read((char*)&isSegment, sizeof(bool));
+
+                EntityAttr attr;
+                file.read((char*)&attr.Color, sizeof(XMFLOAT4));
+                file.read((char*)&attr.LayerId, sizeof(LayerID));
+                file.read((char*)&attr.LineType, sizeof(LineType));
+                file.read((char*)&attr.LineWidth, sizeof(float));
+                file.read((char*)&attr.Visible, sizeof(bool));
+
+                auto entity = std::make_unique<LineEntity>(id, start, end);
+                entity->SetAttr(attr);
+                scene.AddEntity(std::move(entity));
+            }
+            else if (type == 2) // PointEntity
+            {
+                XMFLOAT3 pos;
+                file.read((char*)&pos, sizeof(XMFLOAT3));
+
+                EntityAttr attr;
+                file.read((char*)&attr.Color, sizeof(XMFLOAT4));
+                file.read((char*)&attr.LayerId, sizeof(LayerID));
+                file.read((char*)&attr.LineType, sizeof(LineType));
+                file.read((char*)&attr.LineWidth, sizeof(float));
+                file.read((char*)&attr.Visible, sizeof(bool));
+
+                auto entity = std::make_unique<PointEntity>(id, pos);
+                entity->SetAttr(attr);
+                scene.AddEntity(std::move(entity));
+            }
+        }
+
+        printf("Opened: %s (%d entities)\n", filePath, count);
     }
 
     void DocumentManager::Save()
     {
         if (m_active)
         {
+            std::filesystem::path outputPath =
+                std::filesystem::current_path() / (m_active->GetName() + ".dwg");
+
+            m_active->SetPath(outputPath.string());
             m_active->Save();
         }
     }
 
     void DocumentManager::SaveAs()
     {
-        if (m_active)
-        {
-			// 这里直接调用 SaveAs，实际应用中应该弹出文件对话框让用户选择路径
-            m_active->SaveAs("");
-        }
+        if (!m_active)
+            return;
+
+        char filePath[MAX_PATH] = {};
+
+        // 预填当前文件名
+        std::string currentName = m_active->GetName() + ".dwg";
+        currentName.copy(filePath, currentName.size());
+
+        OPENFILENAMEA ofn = {};
+        ofn.lStructSize = sizeof(ofn);
+        ofn.hwndOwner = nullptr;
+        ofn.lpstrFilter = "DWG Files (*.dwg)\0*.dwg\0All Files (*.*)\0*.*\0";
+        ofn.lpstrFile = filePath;
+        ofn.nMaxFile = MAX_PATH;
+        ofn.lpstrTitle = "Save As";
+        ofn.lpstrDefExt = "dwg";
+        ofn.Flags = OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST;
+
+        if (!GetSaveFileNameA(&ofn))
+            return; // 用户取消了
+
+        m_active->SaveAs(filePath);
     }
 
     void DocumentManager::SaveAll()

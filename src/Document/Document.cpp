@@ -8,6 +8,7 @@
 #include <vector> 
 #include <memory>
 #include <utility>
+#include <fstream>
 namespace MiniCAD
 {
     Document::Document(Renderer& render, float width, float height)
@@ -76,8 +77,68 @@ namespace MiniCAD
 
     bool Document::SaveToFile(const std::string& path)
     {
-        // TODO: Scene 序列化
-		printf("Saving to %s ... (not implemented)\n", path.c_str());
+        std::ofstream file(path, std::ios::binary);
+        if (!file.is_open())
+        {
+            printf("Failed to open file: %s\n", path.c_str());
+            return false;
+        }
+
+        // 写入实体数量
+        int count = m_scene.EntityCount();
+        file.write((const char*)&count, sizeof(count));
+
+        m_scene.ForEachObject([&](const Object& obj)
+            {
+                if (obj.IsKindOf<LineEntity>())
+                {
+                    // 写类型标记
+                    uint8_t type = 1; // 1 = LineEntity
+                    file.write((const char*)&type, sizeof(type));
+
+                    const auto& line = static_cast<const LineEntity&>(obj);
+
+                    // 写 ID
+                    Object::ObjectID id = line.GetID();
+                    file.write((const char*)&id, sizeof(id));
+
+                    // 写几何数据
+                    const Line& geom = line.GetLine();
+                    file.write((const char*)&geom.Start, sizeof(XMFLOAT3));
+                    file.write((const char*)&geom.End, sizeof(XMFLOAT3));
+                    file.write((const char*)&geom.IsSegment, sizeof(bool));
+
+                    // 写属性
+                    const EntityAttr& attr = line.GetAttr();
+                    file.write((const char*)&attr.Color, sizeof(XMFLOAT4));
+                    file.write((const char*)&attr.LayerId, sizeof(LayerID));
+                    file.write((const char*)&attr.LineType, sizeof(LineType));
+                    file.write((const char*)&attr.LineWidth, sizeof(float));
+                    file.write((const char*)&attr.Visible, sizeof(bool));
+                }
+                else if (obj.IsKindOf<PointEntity>())
+                {
+                    uint8_t type = 2; // 2 = PointEntity
+                    file.write((const char*)&type, sizeof(type));
+
+                    const auto& point = static_cast<const PointEntity&>(obj);
+
+                    Object::ObjectID id = point.GetID();
+                    file.write((const char*)&id, sizeof(id));
+
+                    const Point& geom = point.GetPoint();
+                    file.write((const char*)&geom.Position, sizeof(XMFLOAT3));
+
+                    const EntityAttr& attr = point.GetAttr();
+                    file.write((const char*)&attr.Color, sizeof(XMFLOAT4));
+                    file.write((const char*)&attr.LayerId, sizeof(LayerID));
+                    file.write((const char*)&attr.LineType, sizeof(LineType));
+                    file.write((const char*)&attr.LineWidth, sizeof(float));
+                    file.write((const char*)&attr.Visible, sizeof(bool));
+                }
+            });
+
+        printf("Saved to: %s (%d entities)\n", path.c_str(), count);
         m_dirty = false;
         return true;
     }

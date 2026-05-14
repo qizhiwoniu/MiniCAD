@@ -43,7 +43,8 @@ namespace MiniCAD
 		Renderer* m_renderer      = nullptr; // 传递给文档创建用的渲染器指针，非拥有关系
 		float     m_defaultWidth  = 600.f;
 		float     m_defaultHeight = 400.f;
-        
+        std::string m_outputDir = "output";
+
     private:
         int m_untitledCounter = 0;
     };
