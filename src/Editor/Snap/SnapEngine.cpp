@@ -265,7 +265,7 @@ namespace MiniCAD
 
         return best;
     }
-
+   
     // ─── Grid ─────────────────────────────────────────────────────────────────
     SnapResult SnapEngine::TryGrid(const XMFLOAT2& sp, const Camera& cam) const
     {
