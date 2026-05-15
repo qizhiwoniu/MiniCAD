@@ -601,7 +601,7 @@ namespace MiniCAD
 
                 docPtr->GetViewport().Resize(size.x, size.y);
 
-                auto srv = doc->GetViewport().GetRenderTarget().GetSRV();
+                auto srv = doc->GetViewport().GetRenderTarget()->GetNativeShaderResource();
 
                 ImVec2 imageMin = ImGui::GetCursorScreenPos();
                 ImGui::Image(srv, size);
@@ -911,8 +911,8 @@ namespace MiniCAD
 
             // 颜色选择器
             float col[4] = {
-                layer->GetColor().x, layer->GetColor().y,
-                layer->GetColor().z, layer->GetColor().w
+                layer->GetColor().r, layer->GetColor().g,
+                layer->GetColor().b, layer->GetColor().a
             };
             if (ImGui::ColorEdit4("##col", col,
                 ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_AlphaBar))
@@ -1428,7 +1428,7 @@ namespace MiniCAD
 
                     // realPos 减去各方向最小值，使最左纵轴/最底横轴对齐到 gridOrigin
                     // 世界坐标 = gridOrigin + (realPos - min)
-                    XMFLOAT3 start, end;
+                    Math::Point3 start, end;
                     if (a.vertical)
                     {
                         float wx = gridOrigin.x + (a.realPos - vMin);
@@ -1446,7 +1446,9 @@ namespace MiniCAD
                         end = { wxMax, wy, 0.0f };
                     }
 
-                    if (!MiniCAD::Line(start, end, true).IsValid()) continue;
+              
+                    if (!Line(start, end).IsValid())
+                        continue;
                     auto line = std::make_unique<LineEntity>(scene.NextObjectID(), start, end);
                     auto doc =  dm.GetActive();
 				    auto layerId =  doc->GetLayerManager().GetActiveLayerID();

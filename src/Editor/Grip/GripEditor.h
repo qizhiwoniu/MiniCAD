@@ -3,115 +3,100 @@
 #include "Editor/Input/InputEvent.h"
 #include "Editor/Picking/Picking.h"
 #include "Editor/Viewport/Viewport.h"
+#include "Editor/Overlay/Overlay.h"
 #include "Document/CommandStack/CommandStack.h"
 #include "Core/Object/Object.hpp"
-#include <DirectXMath.h>
-#include <cstdint>
+#include "Core/Entity/Entity.hpp"
+#include "Core/Math/Point2.hpp"
+#include "Core/Math/Point3.hpp"
+#include "IEntityGripHandler.h"
+#include "GripType.h"
 #include <vector>
+#include <memory>
+#include <unordered_map>
+#include <cstdint>
 
 namespace MiniCAD
-{
-    struct LineSegment
-    {
-        DirectX::XMFLOAT3 Start;
-        DirectX::XMFLOAT3 End;
-    };
-
-    struct Grip
-    { 
-        enum class Type : uint8_t
-        {
-            Start,
-            Mid,
-            End,
-            Corner,     // 多段线
-            Center,     // CAD 圆心
-            Tangent     // 曲线控制点
-        };
-
-        Object::ObjectID   OwnerID;
-        Type               GripType;
-        DirectX::XMFLOAT3  WorldPos;
-    };
-
-    struct DragState
-    {
-        struct Entry
-        {
-            Object::ObjectID Id;
-            Grip::Type       Type;
-
-            enum class Kind
-            {
-                Line,
-                Point
-            } Kind;
-
-            LineSegment BaseLine;
-            XMFLOAT3    BasePoint;
-        };
-
-        std::vector<Entry> Entries;
-        bool Active = false;
-        XMFLOAT3 DirtyBase = { 0,0,0 };
-
-        void Clear()
-        {
-            Entries.clear();
-            Active = false;
-            DirtyBase = { 0,0,0 };
-        }
-    };
-
+{   
+    // ─────────────────────────────────────────────
+    // GripEditor
+    // ─────────────────────────────────────────────
     class GripEditor
     {
     public:
-        GripEditor(Viewport& viewport, Scene& scene, CommandStack& cmdStack, Picking& picking)
-            : m_viewport(viewport)
-            , m_scene(scene)
-            , m_cmdStack(cmdStack)
-            , m_picking(picking)
-        {
-        }
+        GripEditor(Viewport& viewport, Scene& scene, CommandStack& cmdStack, Picking& picking, Overlay & overlay);
 
     public:
         bool OnInput     (const InputEvent& e);
+        bool IsDragging  ()   const { return m_dragging; }
+        bool IsGripsEmpty()  const { return m_grips.empty(); }
+        void MarkDirty   ()         { m_dirty = true; }
+        void RebuildGrips();
+        void CancelDrag  ();
 
-        bool IsDragging  () const { return m_dragging; }
-        bool IsGripsEmpty() const { return m_grips.empty(); }
-        void ReBuildGrip ()       { Rebuild(); };
-        void MarkDirty   ()       { m_dirty = true; }   // selection 变化后由 Editor 通知
+    public:
+        const std::vector<Grip>& GetGrips     () const { return m_grips; }
+        const std::vector<int>&  HoveredGrips () const { return m_hoveredIdxs; }
 
-        const std::vector<Grip>& GetGrips()     const { return m_grips; }       // 获取夹点 
-        const std::vector<int>&  HoveredGrips() const { return m_hoveredIdxs; }
-        DirectX::XMFLOAT3        GetDragBase()  const;
-          
-        const std::vector<DragState::Entry>& GetDragEntries() const { return m_drag.Entries; }
-        void CancelDrag();
+        // 仅在 IsDragging() 为 true 时有效
+        const Grip* GetActiveGrip() const
+        {
+            if (m_activeGripIdx < 0 || m_activeGripIdx >= (int)m_grips.size())
+                return nullptr;
+            return &m_grips[m_activeGripIdx];
+        }
+
+    public:
+        // 注册 Handler（ctor 中调用）
+        template<typename T>
+        void RegisterHandler(std::unique_ptr<IEntityGripHandler> handler)
+        {
+            static_assert(std::is_base_of_v<Entity, T>, "T must derive from Entity");
+            m_handlers[&T::TypeInfo] = std::move(handler);
+        }
+
+        // 允许外部替换配色
+        GripColors& GetColors() { return m_colors; }
 
     private:
         bool OnMouseDown(const InputEvent& e);
         bool OnMouseMove(const InputEvent& e);
-        bool OnMouseUp  (const InputEvent& e); 
-   
-        bool Rebuild      ();     // 仅在 selection 变化时重建（内部比较上次 selection）
-        int  HitTest      (const DirectX::XMFLOAT2& screenPt, float thresh = 8.f) const; 
-        void UpdateGripPos(Object::ObjectID id, const LineSegment& seg);          // 辅助更新夹点
-
-        LineSegment      MoveGrip  (const LineSegment& seg, Grip::Type type, const DirectX::XMFLOAT3& p);
-        std::vector<int> HitTestAll(const DirectX::XMFLOAT2& screenPt, float thresh = 8.f) const;
+        bool OnMouseUp  (const InputEvent& e);
 
     private:
-        Scene&             m_scene;
-        Viewport&          m_viewport;
-        CommandStack&      m_cmdStack;
-        Picking&           m_picking;                           
-        DragState          m_drag       = { };
-        std::vector<int>   m_hoveredIdxs;
-        std::vector<Grip>  m_grips;
+        IEntityGripHandler* FindHandler(Entity* entity);
 
-        bool               m_dragging   = false;
-        int                m_activeIdx  = -1;
-        bool               m_dirty    = true;   // true = 需要重建夹点  
+    private:
+        int              HitTest   (const Math::Point2& screenPt, float thresh = 8.f) const;
+        std::vector<int> HitTestAll(const Math::Point2& screenPt, float thresh = 8.f) const;
+
+    private:
+        bool Rebuild();
+
+    private:
+        Scene&        m_scene;
+        Viewport&     m_viewport;
+        CommandStack& m_cmdStack;
+        Picking&      m_picking;
+		Overlay&      m_overlay;
+
+    private:
+        // RuntimeTypeInfo* → Handler
+        std::unordered_map<const RuntimeTypeInfo*, std::unique_ptr<IEntityGripHandler>> m_handlers;
+
+    private:
+        std::vector<Grip> m_grips;
+        std::vector<int>  m_hoveredIdxs;
+
+    private:
+        std::vector<GripDragEntry> m_dragEntries;
+
+    private:
+        GripColors           m_colors;
+
+        // 用索引而非指针，避免 vector 重分配后悬空
+        int  m_activeGripIdx = -1;
+        bool m_dragging      = false;
+        bool m_dirty         = true;
     };
 }

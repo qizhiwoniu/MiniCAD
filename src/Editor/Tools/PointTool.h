@@ -6,12 +6,10 @@
 #include "Editor/Viewport/Viewport.h"
 #include "Editor/Overlay/Overlay.h" 
 #include "Core/Entity/PointEntity.hpp"
-#include <cstdio>
-#include <DirectXMath.h>
+#include "Core/Math/Point3.hpp"
 
 namespace MiniCAD
-{
-    using namespace DirectX;
+{ 
 
     class PointTool : public ITool
     {
@@ -20,7 +18,7 @@ namespace MiniCAD
             : m_scene(scene)
             , m_cmdStack(cmdStack)
             , m_viewport(viewport)
-            , m_overlay(overlay) 
+            , m_overlay(overlay)
         {
             printf("[PointTool] 左键放点 | 右键退出\n");
         }
@@ -77,14 +75,14 @@ namespace MiniCAD
             return false; // PointTool 没有持续锚点
         }
 
-        DirectX::XMFLOAT3 GetAnchor() const override
+        Math::Point3 GetAnchor() const override
         {
-            return XMFLOAT3(0.f, 0.f, 0.f);
+            return Math::Point3(0.f, 0.f, 0.f);
         }
 
     private:
 
-        DirectX::XMFLOAT3 GetPoint(const InputEvent& e)
+        Math::Point3 GetPoint(const InputEvent& e)
         {
             if (e.HasSnap)
                 return e.SnapWorld;
@@ -92,14 +90,12 @@ namespace MiniCAD
             return m_viewport.GetCamera().ScreenToWorld(e.MouseX, e.MouseY);
         }
 
-        void Commit(const XMFLOAT3& p)
+        void Commit(const  Math::Point3& p)
         {
             auto id = m_scene.NextObjectID();
 
             auto pointEntity = std::make_unique<PointEntity>(id, p);
-            // 设置图层（关键）：新实体默认放在当前活动图层
-            auto layerId = m_scene.GetLayerManager().GetActiveLayerID();           
-            pointEntity->SetLayerId(layerId);  // ← 加这一行
+
             auto cmd = std::make_unique<AddEntityCommand>(std::move(pointEntity));
             m_cmdStack.Execute(std::move(cmd), m_scene);
 
@@ -110,6 +106,6 @@ namespace MiniCAD
         Scene&        m_scene;
         CommandStack& m_cmdStack;
         Viewport&     m_viewport;
-        Overlay&      m_overlay; 
+        Overlay&      m_overlay;
     };
 }

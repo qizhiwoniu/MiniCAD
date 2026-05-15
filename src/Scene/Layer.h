@@ -1,8 +1,7 @@
 #pragma once
 #include <string>
 #include <cstdint>
-#include <DirectXMath.h>
-
+#include "Core/Math/Color4.hpp"
 namespace MiniCAD
 {
     class ISerializer;
@@ -17,11 +16,11 @@ namespace MiniCAD
 
         LayerID                   GetID()      const;
         const std::string& GetName()    const;
-        const DirectX::XMFLOAT4& GetColor()   const;
+        const Math::Color4& GetColor()   const;
         bool                      IsVisible()  const;
         bool                      IsLocked()   const;
 
-        void SetColor(const DirectX::XMFLOAT4& c);
+        void SetColor(const Math::Color4& c);
         void SetName(std::string n);
         void SetVisible(bool v);
         void SetLocked(bool l);
@@ -32,7 +31,7 @@ namespace MiniCAD
     private:
         LayerID            m_id = 0;
         std::string        m_name;
-        DirectX::XMFLOAT4  m_color{ 1,1,1,1 };
+        Math::Color4       m_color{ 1,1,1,1 };
         bool               m_visible = true;
         bool               m_locked = false;
     };

@@ -20,7 +20,7 @@ namespace MiniCAD
 		const Layer* GetLayer(LayerID id) const;
 
 		std::vector<LayerID> GetAllLayerIDs() const;    // 所有图层 ID 列表
-
+		const Layer& GetActiveLayer()   const { return *m_layers.at(m_activeLayerID); };
 		LayerID GetActiveLayerID() const { return m_activeLayerID; }
 		void    SetActiveLayerID(LayerID id);
 

@@ -1,7 +1,8 @@
 #include "DocumentManager.h"
 #include "Document.h"
-#include "Render/D3D11/Renderer.h"
 #include "Core/Entity/PointEntity.hpp"
+#include "Core/Entity/CircleEntity.hpp"
+#include "Core/Entity/RectangleEntity.hpp"
 #include <utility>
 #include <memory>
 #include <string>
@@ -12,7 +13,7 @@
 
 namespace MiniCAD
 {
-    Document& DocumentManager::Create(Renderer& r, float w, float h)
+    Document& DocumentManager::Create(IRenderer& r, float w, float h)
     {
         auto doc = std::make_unique<Document>(r, w, h);
 
@@ -56,7 +57,7 @@ namespace MiniCAD
         return m_docs; 
     }
 
-    void DocumentManager::SetRenderer(Renderer* renderer)
+    void DocumentManager::SetRenderer(IRenderer* renderer)
     {
         m_renderer = renderer; 
     }
@@ -112,14 +113,12 @@ namespace MiniCAD
 
             if (type == 1) // LineEntity
             {
-                XMFLOAT3 start, end;
-                bool isSegment;
-                file.read((char*)&start, sizeof(XMFLOAT3));
-                file.read((char*)&end, sizeof(XMFLOAT3));
-                file.read((char*)&isSegment, sizeof(bool));
+                Math::Point3 start, end; 
+                file.read((char*)&start, sizeof(Math::Point3));
+                file.read((char*)&end, sizeof(Math::Point3)); 
 
                 EntityAttr attr;
-                file.read((char*)&attr.Color, sizeof(XMFLOAT4));
+                file.read((char*)&attr.Color, sizeof(Math::Color4));
                 file.read((char*)&attr.LayerId, sizeof(LayerID));
                 file.read((char*)&attr.LineType, sizeof(LineType));
                 file.read((char*)&attr.LineWidth, sizeof(float));
@@ -131,17 +130,54 @@ namespace MiniCAD
             }
             else if (type == 2) // PointEntity
             {
-                XMFLOAT3 pos;
-                file.read((char*)&pos, sizeof(XMFLOAT3));
+                Math::Point3 pos;
+                file.read((char*)&pos, sizeof(Math::Point3));
 
                 EntityAttr attr;
-                file.read((char*)&attr.Color, sizeof(XMFLOAT4));
+                file.read((char*)&attr.Color, sizeof(Math::Color4));
                 file.read((char*)&attr.LayerId, sizeof(LayerID));
                 file.read((char*)&attr.LineType, sizeof(LineType));
                 file.read((char*)&attr.LineWidth, sizeof(float));
                 file.read((char*)&attr.Visible, sizeof(bool));
 
                 auto entity = std::make_unique<PointEntity>(id, pos);
+                entity->SetAttr(attr);
+                scene.AddEntity(std::move(entity));
+            }
+            else if (type == 3) // RectEntity
+            {
+                Math::Point3 p1, p2, p3, p4;
+                file.read((char*)&p1, sizeof(Math::Point3));
+                file.read((char*)&p2, sizeof(Math::Point3));
+                file.read((char*)&p3, sizeof(Math::Point3));
+                file.read((char*)&p4, sizeof(Math::Point3));
+
+                EntityAttr attr;
+                file.read((char*)&attr.Color, sizeof(Math::Color4));
+                file.read((char*)&attr.LayerId, sizeof(LayerID));
+                file.read((char*)&attr.LineType, sizeof(LineType));
+                file.read((char*)&attr.LineWidth, sizeof(float));
+                file.read((char*)&attr.Visible, sizeof(bool));
+
+                auto entity = std::make_unique<RectangleEntity>(id, p1, p2, p3, p4);
+                entity->SetAttr(attr);
+                scene.AddEntity(std::move(entity));
+            }
+            else if (type == 4) // CircleEntity
+            {
+                Math::Point3 center;
+                double radius = 0.0;
+                file.read((char*)&center, sizeof(Math::Point3));
+                file.read((char*)&radius, sizeof(double));
+
+                EntityAttr attr;
+                file.read((char*)&attr.Color, sizeof(Math::Color4));
+                file.read((char*)&attr.LayerId, sizeof(LayerID));
+                file.read((char*)&attr.LineType, sizeof(LineType));
+                file.read((char*)&attr.LineWidth, sizeof(float));
+                file.read((char*)&attr.Visible, sizeof(bool));
+
+                auto entity = std::make_unique<CircleEntity>(id, center, radius);
                 entity->SetAttr(attr);
                 scene.AddEntity(std::move(entity));
             }
@@ -173,7 +209,17 @@ namespace MiniCAD
         char filePath[MAX_PATH] = {};
 
         // 预填当前文件名
-        std::string currentName = m_active->GetName() + ".dwg";
+        std::string currentName = m_active->GetName();
+        // 去掉已有的 .dwg / .DWG 后缀
+        static const std::string ext = ".dwg";
+        if (m_active->GetName().size() > ext.size()) {
+            std::string tail = m_active->GetName().substr(m_active->GetName().size() - ext.size());
+            std::transform(tail.begin(), tail.end(), tail.begin(), ::tolower);
+            if (tail == ext)
+                currentName = currentName.substr(0, currentName.size() - ext.size());
+        }
+
+        m_active->GetName().copy(filePath, m_active->GetName().size());
         currentName.copy(filePath, currentName.size());
 
         OPENFILENAMEA ofn = {};

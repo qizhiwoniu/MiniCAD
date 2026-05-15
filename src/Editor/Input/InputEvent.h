@@ -1,5 +1,6 @@
 #pragma once
 #include"pch.h"
+#include "Core/Math/Point3.hpp"
 #include <cstdint> 
 #include <DirectXMath.h>
 #include "KeyCode.h"
@@ -51,7 +52,7 @@ namespace MiniCAD
         KeyCode KeyCode = KeyCode::Unknown; 
 
         bool               HasSnap = false;  // 是否捕获
-        DirectX::XMFLOAT3  SnapWorld;        // 捕获点
+        Math::Point3       SnapWorld;        // 捕获点
 
         bool HasModifier(ModifierKey k) const
         {

@@ -89,7 +89,7 @@ namespace MiniCAD
         void DeleteSelected();
 
         // ── 正交 ─────────────────────────────────────────────
-        bool TryGetAnchor(DirectX::XMFLOAT3& out) const;
+        bool TryGetAnchor(Math::Point3& out) const;
         bool IsOrthoEnabled() const;
         void SetOrthoEnabled(bool enabled);
         void ToggleOrtho();
@@ -147,7 +147,7 @@ namespace MiniCAD
         bool m_orthoEnabled = false;
          
         std::unordered_map<std::string,
-            std::function<std::unique_ptr<ITool>()>> m_toolRegistry;   
+        std::function<std::unique_ptr<ITool>()>>     m_toolRegistry;   
         std::unordered_map<std::string, std::string> m_aliasRegistry;
         std::string                                  m_cmdBuffer;
         std::string                                  m_lastCommand;

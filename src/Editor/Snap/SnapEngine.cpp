@@ -2,68 +2,67 @@
 #include "SnapEngine.h"
 #include "Core/Entity/LineEntity.hpp"
 #include "Core/Entity/PointEntity.hpp"
+#include "Core/Entity/CircleEntity.hpp"
+#include "Core/Entity/RectangleEntity.hpp"
 #include "Core/Object/Object.hpp"
+#include "Core/Math/Point3.hpp"
+#include "Core/Math/Constants.hpp"
 #include "Scene/Scene.h"
 #include "Editor/Viewport/Camera.h"
+#include "Core/Math/MathUtils.hpp"
 #include <cmath>
 #include <algorithm>
+#include <limits>
 #include <unordered_set>
 
-using namespace DirectX;
+namespace MiniCAD{
 
-namespace MiniCAD
-{
-    // ─── 内部工具 ─────────────────────────────────────────────────────────────
-    static float Dist2D(const XMFLOAT2& a, const XMFLOAT2& b)
-    {
-        return std::hypot(a.x - b.x, a.y - b.y);
-    }
-
-    static XMFLOAT3 ClosestPointOnSegment(const XMFLOAT3& p, const XMFLOAT3& a, const XMFLOAT3& b)
-    {
-        float dx = b.x - a.x;
-        float dy = b.y - a.y;
-        float lenSq = dx * dx + dy * dy;
-
-        if (lenSq < 1e-8f) return a;
-
-        float t = std::clamp(((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq, 0.f, 1.f);
-        return { a.x + t * dx, a.y + t * dy, 0.f };
-    }
-
-    // ─── 主入口 ───────────────────────────────────────────────────────────────
-    SnapResult SnapEngine::Query(const XMFLOAT2& sp, const Scene& scene, const Camera& cam,
+    // ─── 主入口，返回第一个有效结果─────────────────────────────────────────────────────────────── 
+    SnapResult SnapEngine::Query(const Math::Point2& sp, const Scene& scene, const Camera& cam,
         const std::unordered_set<Object::ObjectID>& exclude) const
     {
-        // 优先级：端点 > 中点 > 交点 > 垂足 > 最近点 > 网格
         if (EnableEndpoint) { auto r = TryEndpoint(sp, scene, cam, exclude); if (r.IsValid()) return r; }
         if (EnableMidpoint) { auto r = TryMidpoint(sp, scene, cam, exclude); if (r.IsValid()) return r; }
-        if (EnableIntersection) { auto r = TryIntersection(sp, scene, cam, exclude); if (r.IsValid()) return r; }
-        if (EnablePerpendicular) { auto r = TryPerpendicular(sp, scene, cam, exclude); if (r.IsValid()) return r; }
-        if (EnableNearest)  { auto r = TryNearest (sp, scene, cam, exclude); if (r.IsValid()) return r; }
+        if (EnableQuadrant) { auto r = TryQuadrant(sp, scene, cam, exclude); if (r.IsValid()) return r; } // 象限点捕捉放在最近点前面，优先捕捉圆的特征点
+        if (EnableNearest) { auto r = TryNearest(sp, scene, cam, exclude); if (r.IsValid()) return r; }
         if (EnableGrid)     return TryGrid(sp, cam);
         return {};
     }
 
     // ─── Endpoint ─────────────────────────────────────────────────────────────
-    SnapResult SnapEngine::TryEndpoint(const XMFLOAT2& sp, const Scene& scene, const Camera& cam,
+    SnapResult SnapEngine::TryEndpoint(const Math::Point2& sp, const Scene& scene, const Camera& cam,
         const std::unordered_set<Object::ObjectID>& exclude) const
     {
         SnapResult best;
-        float bestDist = FLT_MAX;
+        double bestDist = std::numeric_limits<double>::max();
 
         scene.ForEachObject([&](const Object& obj)
             {
-                if (exclude.contains(obj.GetID())) return;  //  跳过选中对象
+                if (exclude.contains(obj.GetID()))
+                    return;
+
+                if (obj.IsKindOf<PointEntity>())
+                {
+                    auto* point = static_cast<const PointEntity*>(&obj);
+                    if (!point) return;
+
+                    auto& p = point->GetPoint();
+                    double d = Math::Distance(sp, cam.WorldToScreen(p.Position));
+                    if (d < SnapRadiusPx && d < bestDist)
+                    {
+                        bestDist = d;
+                        best = { SnapResult::Type::Endpoint, p.Position, obj.GetID() };
+                    }
+                }
 
                 if (obj.IsKindOf<LineEntity>())
                 {
                     auto* line = static_cast<const LineEntity*>(&obj);
                     if (!line) return;
 
-                    for (const XMFLOAT3& wp : { line->GetLine().Start, line->GetLine().End })
+                    for (const Math::Point3& wp : { line->GetLine().Start, line->GetLine().End })
                     {
-                        float d = Dist2D(sp, cam.WorldToScreen(wp));
+                        double d = Math::Distance(sp, cam.WorldToScreen(wp));
                         if (d < SnapRadiusPx && d < bestDist)
                         {
                             bestDist = d;
@@ -72,35 +71,53 @@ namespace MiniCAD
                     }
                 }
 
-                if (obj.IsKindOf<PointEntity>())
+                if (obj.IsKindOf<RectangleEntity>())
                 {
-                    auto* point = static_cast<const PointEntity*>(&obj);
-                    if (!point) return;
+                    auto* rectangleEntity = static_cast<const RectangleEntity*>(&obj);
+                    if (!rectangleEntity) return;
 
-                    auto& p = point->GetPoint();
+                    const auto& rect = rectangleEntity->GetRectangle();
 
-                    float d = Dist2D(sp, cam.WorldToScreen(p.Position));  // 计算距离
-                    if (d < SnapRadiusPx && d < bestDist)                 // 双重判断
+                    for (const auto& p : { rect.P1, rect.P2, rect.P3, rect.P4 })
+                    {
+                        double d = Math::Distance(sp, cam.WorldToScreen(p));
+                        if (d < SnapRadiusPx && d < bestDist)
+                        {
+                            bestDist = d;
+                            best = { SnapResult::Type::Endpoint, p, obj.GetID() };
+                        }
+                    }
+                }
+
+                // ── 圆心捕捉 ──────────────────────────────────────────
+                if (obj.IsKindOf<CircleEntity>())
+                {
+                    auto* circle = static_cast<const CircleEntity*>(&obj);
+                    if (!circle) return;
+
+                    const Math::Point3& center = circle->GetCircle().Center;
+                    double d = Math::Distance(sp, cam.WorldToScreen(center));
+                    if (d < SnapRadiusPx && d < bestDist)
                     {
                         bestDist = d;
-                        best = { SnapResult::Type::Endpoint, p.Position, obj.GetID() };
-                    }  
-                } 
+                        best = { SnapResult::Type::Endpoint, center, obj.GetID() };
+                    }
+                }
             });
 
         return best;
     }
 
     // ─── Midpoint ─────────────────────────────────────────────────────────────
-    SnapResult SnapEngine::TryMidpoint(const XMFLOAT2& sp, const Scene& scene, const Camera& cam,
+    SnapResult SnapEngine::TryMidpoint(const Math::Point2& sp, const Scene& scene, const Camera& cam,
         const std::unordered_set<Object::ObjectID>& exclude) const
     {
         SnapResult best;
-        float bestDist = FLT_MAX;
+        double bestDist = std::numeric_limits<double>::max();
 
         scene.ForEachObject([&](const Object& obj)
             {
-                if (exclude.contains(obj.GetID())) return;  // 跳过选中对象
+                if (exclude.contains(obj.GetID())) return;
 
                 if (obj.IsKindOf<LineEntity>())
                 {
@@ -108,34 +125,56 @@ namespace MiniCAD
                     if (!line) return;
 
                     auto& L = line->GetLine();
-                    XMFLOAT3 mid = { (L.Start.x + L.End.x) * 0.5f, (L.Start.y + L.End.y) * 0.5f, 0.f };
+                    Math::Point3 mid = Math::Midpoint(L.Start, L.End);
 
-                    float d = Dist2D(sp, cam.WorldToScreen(mid));
+                    double d = Math::Distance(sp, cam.WorldToScreen(mid));
                     if (d < SnapRadiusPx && d < bestDist)
                     {
                         bestDist = d;
                         best = { SnapResult::Type::Midpoint, mid, obj.GetID() };
                     }
                 }
-              
-               
+
+                if (obj.IsKindOf<RectangleEntity>())
+                {
+                    auto* rectangleEntity = static_cast<const RectangleEntity*>(&obj);
+                    if (!rectangleEntity) return;
+
+                    const auto& rect = rectangleEntity->GetRectangle();
+
+                    auto mid12 = Math::Midpoint(rect.P1, rect.P2);
+                    auto mid23 = Math::Midpoint(rect.P2, rect.P3);
+                    auto mid34 = Math::Midpoint(rect.P3, rect.P4);
+                    auto mid41 = Math::Midpoint(rect.P4, rect.P1);
+
+                    for (const auto& p : { mid12, mid23, mid34, mid41 })
+                    {
+                        double d = Math::Distance(sp, cam.WorldToScreen(p));
+                        if (d < SnapRadiusPx && d < bestDist)
+                        {
+                            bestDist = d;
+                            best = { SnapResult::Type::Midpoint, p, obj.GetID() };
+                        }
+                    }
+                }
+
             });
 
         return best;
     }
 
     // ─── Nearest ──────────────────────────────────────────────────────────────
-    SnapResult SnapEngine::TryNearest(const XMFLOAT2& sp, const Scene& scene, const Camera& cam,
+    SnapResult SnapEngine::TryNearest(const Math::Point2& sp, const Scene& scene, const Camera& cam,
         const std::unordered_set<Object::ObjectID>& exclude) const
     {
         SnapResult best;
-        float bestDist = FLT_MAX;
+        double bestDist = std::numeric_limits<double>::max();
 
-        XMFLOAT3 worldMouse = cam.ScreenToWorld(sp.x, sp.y);
+        Math::Point3 worldMouse = cam.ScreenToWorld(sp.x, sp.y);
 
         scene.ForEachObject([&](const Object& obj)
             {
-                if (exclude.contains(obj.GetID())) return;  // 跳过选中对象
+                if (exclude.contains(obj.GetID())) return;
 
                 if (obj.IsKindOf<LineEntity>())
                 {
@@ -143,24 +182,121 @@ namespace MiniCAD
                     if (!line) return;
 
                     auto& L = line->GetLine();
-                    XMFLOAT3 closest = ClosestPointOnSegment(worldMouse, L.Start, L.End);
+                    Math::Point3 closest = Math::ClosestPointOnSegment(worldMouse, L.Start, L.End);
 
-                    float d = Dist2D(sp, cam.WorldToScreen(closest));
+                    double d = Math::Distance(sp, cam.WorldToScreen(closest));
                     if (d < SnapRadiusPx && d < bestDist)
                     {
                         bestDist = d;
                         best = { SnapResult::Type::Nearest, closest, obj.GetID() };
                     }
+                }
 
-                }   
+                if (obj.IsKindOf<RectangleEntity>())
+                {
+                    auto* rectangleEntity = static_cast<const RectangleEntity*>(&obj);
+                    if (!rectangleEntity) return;
+                    const auto& rect = rectangleEntity->GetRectangle();
 
+                    // 计算矩形四条边的最近点
+                    Math::Point3 closest12 = Math::ClosestPointOnSegment(worldMouse, rect.P1, rect.P2);
+                    Math::Point3 closest23 = Math::ClosestPointOnSegment(worldMouse, rect.P2, rect.P3);
+                    Math::Point3 closest34 = Math::ClosestPointOnSegment(worldMouse, rect.P3, rect.P4);
+                    Math::Point3 closest41 = Math::ClosestPointOnSegment(worldMouse, rect.P4, rect.P1);
+                    for (const auto& p : { closest12, closest23, closest34, closest41 })
+                    {
+                        double d = Math::Distance(sp, cam.WorldToScreen(p));
+                        if (d < SnapRadiusPx && d < bestDist)
+                        {
+                            bestDist = d;
+                            best = { SnapResult::Type::Nearest, p, obj.GetID() };
+                        }
+                    }
+
+                }
+
+                // 圆上最近点：鼠标世界坐标 → 圆心方向单位向量 → 投影到圆上
+                if (obj.IsKindOf<CircleEntity>())
+                {
+                    auto* circle = static_cast<const CircleEntity*>(&obj);
+                    if (!circle) return;
+
+                    const Math::Point3& c = circle->GetCircle().Center;
+                    const double        r = circle->GetCircle().Radius;
+
+                    // 鼠标世界坐标 → 圆心方向单位向量 → 投影到圆上
+                    double dx = worldMouse.x - c.x;
+                    double dy = worldMouse.y - c.y;
+                    double len = std::sqrt(dx * dx + dy * dy);
+                    if (len < 1e-10) return;   // 鼠标恰好在圆心，跳过
+
+                    Math::Point3 onCircle =
+                    {
+                        c.x + r * (dx / len),
+                        c.y + r * (dy / len),
+                        c.z
+                    };
+
+                    double d = Math::Distance(sp, cam.WorldToScreen(onCircle));
+                    if (d < SnapRadiusPx && d < bestDist)
+                    {
+                        bestDist = d;
+                        best = { SnapResult::Type::Nearest, onCircle, obj.GetID() };
+                    }
+                }
             });
 
         return best;
     }
+    SnapResult SnapEngine::TryQuadrant(const Math::Point2& sp, const Scene& scene, const Camera& cam, const std::unordered_set<Object::ObjectID>& exclude) const
+
+    {
+        SnapResult best;
+        double bestDist = std::numeric_limits<double>::max();
+
+        scene.ForEachObject([&](const Object& obj)
+            {
+                if (exclude.contains(obj.GetID())) return;
+                if (!obj.IsKindOf<CircleEntity>()) return;
+
+                auto* circle = static_cast<const CircleEntity*>(&obj);
+                if (!circle) return;
+
+                const Math::Point3& c = circle->GetCircle().Center;
+                const double        r = circle->GetCircle().Radius;
+
+                // 四个象限点：0° 90° 180° 270°
+                const Math::Point3 quadrants[4] =
+                {
+                    { c.x + r, c.y,     c.z },   // 右
+                    { c.x,     c.y + r, c.z },   // 上
+                    { c.x - r, c.y,     c.z },   // 左
+                    { c.x,     c.y - r, c.z }    // 下
+                };
+
+                for (const Math::Point3& qp : quadrants)
+                {
+                    double d = Math::Distance(sp, cam.WorldToScreen(qp));
+                    if (d < SnapRadiusPx && d < bestDist)
+                    {
+                        bestDist = d;
+                        best = { SnapResult::Type::Quadrant, qp, obj.GetID() };
+                    }
+                }
+            });
+
+        if (best.IsValid())
+        {
+
+            printf(" SnapResult::Type::Quadrant\n");
+        }
+
+
+        return best;
+    }
+    // 
     // ─── Intersection ─────────────────────────────────────────────────────────
-    // 两条线段（无限延长）的交点，结果必须落在两段的包围盒范围内才接受
-    SnapResult SnapEngine::TryIntersection(const XMFLOAT2& sp, const Scene& scene, const Camera& cam,
+    SnapResult SnapEngine::TryIntersection(const Math::Point2& sp, const Scene& scene, const Camera& cam,
         const std::unordered_set<Object::ObjectID>& exclude) const
     {
         // 收集所有线段
@@ -200,8 +336,8 @@ namespace MiniCAD
                 // 两个参数都必须在 [0,1]，交点才在线段上
                 if (t < 0.f || t > 1.f || u < 0.f || u > 1.f) continue;
 
-                XMFLOAT3 wp = { A.Start.x + t * r_x, A.Start.y + t * r_y, 0.f };
-                float d = Dist2D(sp, cam.WorldToScreen(wp));
+                Math::Point3 wp = { A.Start.x + t * r_x, A.Start.y + t * r_y, 0.f };
+                float d = Math::Distance(sp, cam.WorldToScreen(wp));
                 if (d < SnapRadiusPx && d < bestDist)
                 {
                     bestDist = d;
@@ -215,13 +351,13 @@ namespace MiniCAD
 
     // ─── Perpendicular ────────────────────────────────────────────────────────
 
-    SnapResult SnapEngine::TryPerpendicular(const XMFLOAT2& sp, const Scene& scene, const Camera& cam,
+    SnapResult SnapEngine::TryPerpendicular(const Math::Point2& sp, const Scene& scene, const Camera& cam,
         const std::unordered_set<Object::ObjectID>& exclude) const
     {
         SnapResult best;
         float bestDist = FLT_MAX;
 
-        XMFLOAT3 worldMouse = cam.ScreenToWorld(sp.x, sp.y);
+        Math::Point3 worldMouse = cam.ScreenToWorld(sp.x, sp.y);
 
         scene.ForEachObject([&](const Object& obj)
             {
@@ -243,19 +379,19 @@ namespace MiniCAD
 
                 // 把世界距离换算成屏幕像素距离来与 SnapRadiusPx 比较
                 // 用 cam.Scale() 获取缩放比，若无此接口则用近似：取两个世界点的屏幕距离
-                XMFLOAT2 refA = cam.WorldToScreen(L.Start);
-                XMFLOAT2 refB = cam.WorldToScreen({ L.Start.x + dx / len, L.Start.y + dy / len, 0.f });
-                float pixelsPerUnit = Dist2D(refA, refB);   // 1 个世界单位对应多少像素
+                Math::Point2 refA = cam.WorldToScreen(L.Start);
+                Math::Point2 refB = cam.WorldToScreen({ L.Start.x + dx / len, L.Start.y + dy / len, 0.f });
+                float pixelsPerUnit = Math::Distance(refA, refB);   // 1 个世界单位对应多少像素
                 float distPx = distWorld * pixelsPerUnit;
 
                 if (distPx > SnapRadiusPx) return;  // 鼠标离线太远，不吸附
 
                 // 计算垂足（投影到无限延长线上，不 clamp，CAD 标准行为）
                 float t = ((worldMouse.x - L.Start.x) * dx + (worldMouse.y - L.Start.y) * dy) / lenSq;
-                XMFLOAT3 foot = { L.Start.x + t * dx, L.Start.y + t * dy, 0.f };
+                Math::Point3 foot = { L.Start.x + t * dx, L.Start.y + t * dy, 0.f };
 
                 // 以鼠标屏幕位置到垂足屏幕位置的距离作为 best 竞争依据
-                float d = Dist2D(sp, cam.WorldToScreen(foot));
+                float d = Math::Distance(sp, cam.WorldToScreen(foot));
                 if (distPx < bestDist)
                 {
 
@@ -271,16 +407,16 @@ namespace MiniCAD
     }
 
     // ─── Grid ─────────────────────────────────────────────────────────────────
-    SnapResult SnapEngine::TryGrid(const XMFLOAT2& sp, const Camera& cam) const
+    SnapResult SnapEngine::TryGrid(const Math::Point2& sp, const Camera& cam) const
     {
-        XMFLOAT3 w = cam.ScreenToWorld(sp.x, sp.y);
+        Math::Point3 w = cam.ScreenToWorld(sp.x, sp.y);
         return
         {
             SnapResult::Type::Grid,
             {
                 std::round(w.x / GridSize) * GridSize,
                 std::round(w.y / GridSize) * GridSize,
-                0.f
+                0.0
             },
             Object::InvalidID
         };
