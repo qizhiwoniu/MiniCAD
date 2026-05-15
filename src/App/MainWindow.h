@@ -7,7 +7,9 @@
 #include "Editor/Input/InputSystem.h" 
 #include "Editor/Input/ViewportInputAdapter.h"
 #include "UI/UIManager.h" 
-#include "Document/DocumentManager.h"
+#include "Document/DocumentManager.h" 
+#include "NotifyIcon/TrayIcon.h"
+
 namespace MiniCAD
 {
 	class MainWindow
@@ -41,5 +43,7 @@ namespace MiniCAD
 		DocumentManager               m_docManager; 
 		ViewportInputAdapter          m_viewportInputAdapter;
 		UIManager                     m_uiManager; 
+		 
+		TrayIcon                      m_trayIcon;
 	};
 }  

@@ -43,6 +43,7 @@ namespace MiniCAD
 		, m_swapChain(nullptr)
 		, m_renderer(nullptr) 
 		, m_docManager()
+		, m_trayIcon(GetModuleHandle(nullptr), L"MiniCAD")
 	{}
 
 	MainWindow::~MainWindow()
@@ -54,7 +55,10 @@ namespace MiniCAD
 			return false;
 
 		RECT rc;
-		GetClientRect(m_hwnd, &rc);
+		GetClientRect(m_hwnd, &rc); 
+
+		m_trayIcon.Create(m_hwnd); // 创建托盘图标
+		m_trayIcon.ShowBalloon(L"MiniCAD 已启动", L"程序正在运行中...");
 
 		int clientW = rc.right - rc.left;
 		int clientH = rc.bottom - rc.top;

@@ -149,13 +149,21 @@
         UINT msg = LOWORD(lParam);
         switch (msg) {
         case WM_LBUTTONDBLCLK:   // 双击 → 显示主窗口
-            SendMessage(GetParent(m_hwnd), WM_COMMAND, ID_TRAY_SHOW, 0);
+            if (m_parentHwnd)
+            {
+                ::ShowWindow(m_parentHwnd, SW_RESTORE);
+                ::SetForegroundWindow(m_parentHwnd);
+            }
             break;
         case WM_RBUTTONUP:        // 右键 → 弹出菜单
             ShowContextMenu();
             break;
         case NIN_BALLOONUSERCLICK: // 点击气泡通知
-            SendMessage(GetParent(m_hwnd), WM_COMMAND, ID_TRAY_SHOW, 0);
+            if (m_parentHwnd)
+            {
+                ::ShowWindow(m_parentHwnd, SW_RESTORE);
+                ::SetForegroundWindow(m_parentHwnd);
+            }
             break;
         }
     }

@@ -435,7 +435,7 @@ namespace MiniCAD
             ImGui::Button("##close", ImVec2(btnW, 0.f));
             DrawCloseIcon(dl, RectCenter(ImGui::GetItemRectMin(), ImGui::GetItemRectSize()), iconSize, iconCol);
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("关闭");
-            if (ImGui::IsItemClicked()) ShowWindow(m_hwnd, SW_MINIMIZE); //PostMessage(m_hwnd, WM_CLOSE, 0, 0);
+            if (ImGui::IsItemClicked()) ShowWindow(m_hwnd, SW_HIDE); //PostMessage(m_hwnd, WM_CLOSE, 0, 0);
             ImGui::PopStyleColor(2);
 
             ImGui::PopStyleColor(3);
