@@ -1,8 +1,11 @@
 // Microsoft Visual C++ generated resource script.
 //
 #include "resource.h"
+#include "version.h"          // 鐗堟湰淇℃伅闆嗕腑鍦ㄦ
+#include <winver.h>
+
 /////////////////////////////////////////////////////////////////////////////
-// 中文(简体，中国) resources
+// 涓枃(绠�浣擄紝涓浗) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_CHS)
 #pragma code_page(936)
@@ -13,20 +16,20 @@
 // TEXTINCLUDE
 //
 
-1 TEXTINCLUDE 
+1 TEXTINCLUDE
 BEGIN
-    "resource.h\0"
+"resource.h\0"
 END
 
-2 TEXTINCLUDE 
+2 TEXTINCLUDE
 BEGIN
-    "\0"
+"\0"
 END
 
-3 TEXTINCLUDE 
+3 TEXTINCLUDE
 BEGIN
-    "\r\n"
-    "\0"
+"\r\n"
+"\0"
 END
 
 #endif    // APSTUDIO_INVOKED
@@ -39,9 +42,52 @@ END
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDI_ICON1               ICON                    "assets\\icons\\logo.ico"
+IDI_ICON1 ICON "assets\\icons\\logo.ico"
 
-#endif    // 中文(简体，中国) resources
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION    APP_VERSION_MAJOR, APP_VERSION_MINOR, APP_VERSION_PATCH, APP_VERSION_BUILD
+PRODUCTVERSION APP_VERSION_MAJOR, APP_VERSION_MINOR, APP_VERSION_PATCH, APP_VERSION_BUILD         // 鏉ヨ嚜 version.h
+FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+
+#ifdef _DEBUG
+FILEFLAGS VS_FF_DEBUG
+#else
+FILEFLAGS 0x0L
+#endif
+
+FILEOS VOS__WINDOWS32
+FILETYPE VFT_APP
+FILESUBTYPE 0x0L
+
+BEGIN
+BLOCK "StringFileInfo"
+BEGIN
+BLOCK "080404B0"
+BEGIN
+VALUE "CompanyName",       APP_COMPANY_NAME   "\0"
+VALUE "FileDescription",   APP_FILE_DESC      "\0"
+VALUE "FileVersion",       APP_VERSION_A      "\0"
+VALUE "InternalName",      APP_INTERNAL_NAME  "\0"
+VALUE "OriginalFilename",  APP_ORIGINAL_FILE  "\0"
+VALUE "ProductName",       APP_PRODUCT_NAME   "\0"
+VALUE "ProductVersion",    APP_VERSION_A      "\0"
+VALUE "LegalCopyright",	   "Copyright(C) 2026/05/15 Qizhiwoniu.\0"
+END
+END
+
+BLOCK "VarFileInfo"
+BEGIN
+VALUE "Translation", 0x0804, 1200
+END
+END
+
+#endif    // 涓枃(绠�浣擄紝涓浗) resources
 /////////////////////////////////////////////////////////////////////////////
 
 
@@ -51,8 +97,5 @@ IDI_ICON1               ICON                    "assets\\icons\\logo.ico"
 //
 // Generated from the TEXTINCLUDE 3 resource.
 //
-
-
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
-
