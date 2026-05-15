@@ -1665,7 +1665,7 @@ namespace MiniCAD
         float alpha = 1.0f - (float)((ImGui::GetTime() - dm.m_lastSaveTime) / cooldown);
         ImGui::SameLine();
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 1.f, 0.4f, alpha));
-        ImGui::TextUnformatted("✓ 已保存");
+        ImGui::TextUnformatted("● 已保存");
         ImGui::PopStyleColor();
         }
         else

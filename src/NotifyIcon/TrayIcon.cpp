@@ -1,4 +1,5 @@
 #include "TrayIcon.h"
+#include "MainWindow.h"
 #include <sstream>
 #include <string>
 
@@ -176,6 +177,7 @@
                 break;
             case ID_TRAY_SHOW:
                 // TODO: 显示你的主窗口
+// ShowWindow(g_trayInstance->m_parentHwnd, SW_SHOW);
                 break;
             case ID_TRAY_CHECK:
                 g_trayInstance->CheckUpdate();
