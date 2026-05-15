@@ -15,6 +15,7 @@
 #include <stb/stb_image.h> 
 #include "pch.h" 
 #include <functional>
+#include "../../version.h" 
 
 namespace MiniCAD
 { 
@@ -348,7 +349,7 @@ namespace MiniCAD
             ImGui::Text("MiniCAD");
             ImGui::Separator();
 
-            ImGui::Text("版本: 1.0");
+            ImGui::Text("版本: %s" , APP_VERSION_A);
             ImGui::Text("基于 Dear ImGui");
             ImGui::Text("作者:\n            Hello");
             ImGui::Text("鸣谢:\n        Qizhiwoniu\n          七只蜗牛");

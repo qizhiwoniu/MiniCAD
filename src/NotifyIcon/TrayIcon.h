@@ -3,11 +3,11 @@
 #include <shellapi.h>
 #include <string>
 #include <wininet.h>
+#include "../../version.h" 
 
 #pragma comment(lib, "Wininet.lib")
 #pragma comment(lib, "Shell32.lib")
 
-#define APP_VERSION L"1.0.2"   // 你当前程序的版本号
 #define WM_TRAYICON (WM_USER + 1)   // 自定义托盘消息
 #define ID_TRAY_ICON 1001
 #define ID_TRAY_EXIT 2001
