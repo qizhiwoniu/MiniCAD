@@ -3,36 +3,28 @@
 #include "Editor/Grip/GripEditor.h"
 #include "Core/Object/Object.hpp"
 #include "Core/Entity/LineEntity.hpp"
+#include "Core/Entity/CircleEntity.hpp"
 #include "Core/Entity/PointEntity.hpp"
-#include <memory> 
+#include "Core/Entity/RectangleEntity.hpp"
+#include "Core/Math/Point3.hpp"
+#include "Editor/Grip/GripType.h"
+#include <memory>
+
 namespace MiniCAD
-{
-    struct DragEntityEntry
-    {
-        Object::ObjectID Id;
-
-        enum class Kind
-        {
-            Line,
-            Point
-        } Kind;
-
-        LineSegment BeforeLine;
-        LineSegment AfterLine;
-
-        XMFLOAT3   BeforePoint;
-        XMFLOAT3   AfterPoint;
-    };
-
+{ 
     class DragEntitiesCommand : public ICommand
     {
     public:
         explicit DragEntitiesCommand(std::vector<DragEntityEntry> entries)
             : m_entries(std::move(entries)) {}
 
-        void Execute(Scene& scene) override
+        bool Execute(Scene& scene) override
         {
+            if (m_entries.empty())
+                return false;
+
             Apply(scene, /*useAfter=*/true);
+            return true;
         }
 
         void Undo(Scene& scene) override
@@ -56,15 +48,31 @@ namespace MiniCAD
                 {
                     auto* line = static_cast<LineEntity*>(obj);
                     const auto& seg = useAfter ? e.AfterLine : e.BeforeLine;
-                    line->SetLine({ seg.Start,seg.End });
+                    line->SetLine({ seg.Start, seg.End });
                 }
-                else if (e.Kind == DragEntityEntry::Kind::Point)
+                
+                if (e.Kind == DragEntityEntry::Kind::Point)
                 {
                     auto* pt = static_cast<PointEntity*>(obj);
                     const auto& p = useAfter ? e.AfterPoint : e.BeforePoint;
                     pt->SetPoint({ p });
                 }
-            } 
+
+                if (e.Kind == DragEntityEntry::Kind::Circle)
+                {
+                    auto* circle = static_cast<CircleEntity*>(obj);
+                    const auto& snap = useAfter ? e.AfterCircle : e.BeforeCircle;
+                    circle->SetCircle({ snap.Center,snap.Radius });
+                }
+
+                if (e.Kind == DragEntityEntry::Kind::Rectangle)
+                {
+                    auto* rect = static_cast<RectangleEntity*>(obj);
+                    const auto& snap = useAfter ? e.AfterRect : e.BeforeRect; 
+                    rect->SetRectangle(snap);
+                }
+
+            }
         }
     };
 }

@@ -1,10 +1,11 @@
 #include "Document.h"    
-#include "Render/D3D11/Renderer.h"
-#include "Core/Entity/LineEntity.hpp"
+#include "Render/IRenderer.h"
 #include "Core/Entity/PointEntity.hpp"
+#include "Core/Entity/LineEntity.hpp"
+#include "Core/Entity/CircleEntity.hpp"
 #include "Core/Object/Object.hpp"
-#include "Core/Entity/Entity.hpp"
-#include "Scene/Layer.h"
+#include "Core/Math/Color4.hpp"
+#include "Core/Math/Constants.hpp"
 #include <vector> 
 #include <memory>
 #include <utility>
@@ -12,7 +13,7 @@
 #include <filesystem>
 namespace MiniCAD
 {
-    Document::Document(Renderer& render, float width, float height)
+    Document::Document(IRenderer& render, float width, float height)
         : m_scene()
         , m_cmdStack()
         , m_viewport(render, width, height)
@@ -164,10 +165,10 @@ namespace MiniCAD
             }
             else                          //  2.拖动 显示原来位置
             {
-                for (const auto& entry : m_editor.GetGripEditor().GetDragEntries())
+               /* for (const auto& entry : m_editor.GetGripEditor().GetDragEntries())
                 {
                     m_overlay.AddLine(entry.BaseLine.Start, entry.BaseLine.End, { 0.6, 0.6, 0.6,0.6 });
-                }
+                }*/
             }
         }
 
@@ -190,102 +191,30 @@ namespace MiniCAD
         const auto& hoverIds     = m_picking.GetHovered();
         const auto& selectionIds = m_picking.GetSelection();
 
-        const DirectX::XMFLOAT4 hoverColor     = { 0,  0.5, 0.8, 0.9 };
-        const DirectX::XMFLOAT4 selectionColor = { 0,  0.3, 0.8, 0.9 };
+        // 优化：当没有悬停和选择时，清除预览数据并重建夹点，避免残留和状态错误
+        if (hoverIds.empty() || selectionIds.empty())
+        {
+            m_overlay.Clear();
+            m_editor.GetGripEditor().RebuildGrips(); // 确保夹点状态正确
+        }
+
+        DrawContext ctx(m_sceneVertices, m_overlay);
 
         m_scene.ForEachObject([&](const Object& obj)
             {
-                const Layer* layer = nullptr;
                 if (obj.IsKindOf<Entity>())
                 {
-                    const auto& ent = static_cast<const Entity&>(obj);
-                    layer = m_scene.GetLayerManager().GetLayer(ent.GetLayerID());
-                    if (layer && !layer->IsVisible()) return; // 隐藏则跳过
-                }
-                if (obj.IsKindOf<LineEntity>())  // 线
-                {
-                    const auto& line = static_cast<const LineEntity&>(obj);
-                    const auto& attr = line.GetAttr();
-                    const auto& geom = line.GetLine();
+                    const auto& entity = static_cast<const Entity&>(obj);
 
-                    const auto id = obj.GetID();
-                     
-                    const bool isSelected = selectionIds.contains(id);
-                    const bool isHovered = hoverIds.contains(id);
-                    // ── 颜色：优先用图层颜色 ──────────────────
-                    DirectX::XMFLOAT4 drawColor = attr.Color;
-					// 获取图层颜色（如果有图层的话）
-                    layer = m_scene.GetLayerManager().GetLayer(attr.LayerId);
-                    if (layer)
-                    {
-                        drawColor = layer->GetColor();
-                    }
-
-                    //printf("Render doc=%p LayerID=%u color=(%.2f,%.2f,%.2f)\n",
-                    //    (void*)layer,
-                    //    static_cast<const Entity&>(obj).GetLayerID(),
-                    //    drawColor.x, drawColor.y, drawColor.z);
-                    // ===== Base：只画普通 =====
-                    if (!isSelected && !isHovered)
-                    {
-                        m_sceneVertices.push_back({ geom.Start, drawColor });
-                        m_sceneVertices.push_back({ geom.End,   drawColor });
-                    }
-
-                    // ===== Overlay：画高亮 =====
-                    if (isSelected)
-                    {
-                        m_overlay.AddLine(geom.Start, geom.End, selectionColor);
-                    }
-                    else if (isHovered)
-                    {
-                        m_overlay.AddLine(geom.Start, geom.End, hoverColor);
-                    }
+                    auto isSelected = selectionIds.contains(obj.GetID());
+                    auto isHovered = hoverIds.contains(obj.GetID());
+                    entity.Draw(ctx, isSelected, isHovered);
                 }
 
-                if (obj.IsKindOf<PointEntity>())  // 使用线模拟点
-                {
-                    const auto& point = static_cast<const PointEntity&>(obj);
-                    const auto& attr  = point.GetAttr();
-                    const auto& geom  = point.GetPoint();
-
-                    const auto id         = obj.GetID(); 
-                    const bool isSelected = selectionIds.contains(id);
-                    const bool isHovered  = hoverIds.contains(id);
-                    // ── 颜色：优先用图层颜色 ──────────────────
-                    DirectX::XMFLOAT4 drawColor = attr.Color;
-                    if (layer)
-                        drawColor = layer->GetColor();
-                    // 绘制为十字
-                    const float s = 0.2f;
-                    auto        p = geom.Position;
-
-                    // ===== Base：只画普通 =====
-                    if (!isSelected && !isHovered)
-                    {  
-                        m_sceneVertices.push_back({ {p.x - s ,p.y,p.z}, drawColor });
-                        m_sceneVertices.push_back({ {p.x + s ,p.y,p.z}, drawColor });
-
-                        m_sceneVertices.push_back({ {p.x  ,p.y - s,p.z}, drawColor });
-                        m_sceneVertices.push_back({ {p.x  ,p.y + s,p.z}, drawColor });
-                    }
-
-                    // ===== Overlay：画高亮 =====
-                    if (isSelected)
-                    { 
-                        m_overlay.AddLine({ p.x - s ,p.y,p.z }, { p.x + s ,p.y,p.z }, selectionColor);
-                        m_overlay.AddLine({ p.x  ,p.y - s,p.z }, { p.x  ,p.y + s,p.z }, selectionColor);
-                    }
-                    else if (isHovered)
-                    {
-                        m_overlay.AddLine({ p.x - s ,p.y,p.z }, { p.x + s ,p.y,p.z }, hoverColor);
-                        m_overlay.AddLine({ p.x  ,p.y - s,p.z }, { p.x  ,p.y + s,p.z }, hoverColor); 
-                    }
-                }
             });
 
         m_scene.ClearDirty();
-        m_picking.ClearDirty(); 
+        m_picking.ClearDirty();
     }
 
     ViewState Document::BuildViewState()

@@ -12,8 +12,8 @@
 // ── 绘制工具 ──────────────────────────────────────────────────
 #include "Editor/Tools/LineTool.h"
 #include "Editor/Tools/PointTool.h"
-//#include "Editor/Tools/Draw/RectangleTool.h"
-//#include "Editor/Tools/Draw/CircleTool.h"
+#include "Editor/Tools/CircleTool.h"
+#include "Editor/Tools/RectangleTool.h"
 //#include "Editor/Tools/Draw/ArcTool.h"
 //#include "Editor/Tools/Draw/EllipseTool.h"
 //#include "Editor/Tools/Draw/PolylineTool.h"
@@ -52,7 +52,7 @@ namespace MiniCAD
         , m_picking(picking)
         , m_snap(snap)
         , m_currentSnap(currentSnap)
-        , m_gripEditor(m_viewport, m_scene, m_cmdStack, m_picking)
+        , m_gripEditor(viewport, scene, cmdStack, picking, overlay)
         , m_anchorLine({}, {})
     {
         RegisterBuiltinTools();
@@ -69,9 +69,9 @@ namespace MiniCAD
         // ── 绘制工具 ──────────────────────────────────────────
         RegisterTool("Line",      [this] { return std::make_unique<LineTool>     (m_scene, m_cmdStack, m_viewport, m_overlay);});
         RegisterTool("Point",     [this] { return std::make_unique<PointTool>    (m_scene, m_cmdStack, m_viewport, m_overlay);});
-       // RegisterTool("Rectangle", [this] { return std::make_unique<RectangleTool>(m_scene, m_cmdStack, m_viewport, m_overlay);});
-       // RegisterTool("Circle",    [this] { return std::make_unique<CircleTool>   (m_scene, m_cmdStack, m_viewport, m_overlay);});
-       // RegisterTool("Arc",       [this] { return std::make_unique<ArcTool>      (m_scene, m_cmdStack, m_viewport, m_overlay);});
+        RegisterTool("Circle",    [this] { return std::make_unique<CircleTool>   (m_scene, m_cmdStack, m_viewport, m_overlay); });
+        RegisterTool("Rectangle", [this] { return std::make_unique<RectangleTool>(m_scene, m_cmdStack, m_viewport, m_overlay); });
+        // RegisterTool("Arc",       [this] { return std::make_unique<ArcTool>      (m_scene, m_cmdStack, m_viewport, m_overlay);});
        // RegisterTool("Ellipse",   [this] { return std::make_unique<EllipseTool>  (m_scene, m_cmdStack, m_viewport, m_overlay);});
        // RegisterTool("Polyline",  [this] { return std::make_unique<PolylineTool> (m_scene, m_cmdStack, m_viewport, m_overlay);});
        // RegisterTool("Spline",    [this] { return std::make_unique<SplineTool>   (m_scene, m_cmdStack, m_viewport, m_overlay);});
@@ -584,7 +584,7 @@ namespace MiniCAD
         return out;
     }
 
-    bool EditorContext::TryGetAnchor(DirectX::XMFLOAT3& out) const
+    bool EditorContext::TryGetAnchor(Math::Point3& out) const
     {
         if (m_tool && m_tool->HasAnchor())
         {

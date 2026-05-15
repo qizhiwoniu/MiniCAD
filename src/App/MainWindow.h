@@ -3,7 +3,8 @@
 #include <memory>  
 #include "Render/D3D11/Device.h"
 #include "Render/D3D11/SwapChain.h"
-#include "Render/D3D11/Renderer.h" 
+#include "Render/IRenderer.h"             
+#include "Render/IRenderTarget.h"
 #include "Editor/Input/InputSystem.h" 
 #include "Editor/Input/ViewportInputAdapter.h"
 #include "UI/UIManager.h" 
@@ -26,7 +27,7 @@ namespace MiniCAD
 		LRESULT EventProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 		bool    InitWindow(const wchar_t* title, int width, int height);
 		bool    InitD3D11(int width, int height);  
-		bool    InitDocument(Renderer& renderer, int width, int height);
+		bool    InitDocument(int width, int height);
 
 		void DocumentInput();
 		// ── 渲染 ──────────────────────────────────────────────
@@ -38,7 +39,7 @@ namespace MiniCAD
 		// ── D3D11 层（硬件资源）──────────────────────────────
 		std::unique_ptr<Device>       m_device;
 		std::unique_ptr<SwapChain>    m_swapChain;
-		std::unique_ptr<Renderer>     m_renderer;
+		std::unique_ptr<IRenderer>    m_renderer;
 		 
 		DocumentManager               m_docManager; 
 		ViewportInputAdapter          m_viewportInputAdapter;

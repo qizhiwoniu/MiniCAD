@@ -4,8 +4,10 @@
 #include "Grid.h"
 #include "Axis.h"
 #include "Gizmo.h"
-#include "Editor/Context/ViewState.h" 
-#include "Render/D3D11/Renderer.h"
+#include "Editor/Context/ViewState.h"  
+#include "Core/Math/PackedTypes.hpp"
+#include "Render/IRenderTarget.h"
+#include "Render/IRenderer.h"
 #include <d3d11.h>
 namespace MiniCAD
 { 
@@ -30,7 +32,7 @@ namespace MiniCAD
     class Viewport
     {
     public:
-        Viewport(Renderer& renderer, float width, float height);
+        Viewport(IRenderer& renderer, float width, float height);
 
         void Render(const ViewState& viewState);
         void Resize(float width, float height);
@@ -54,10 +56,9 @@ namespace MiniCAD
         bool IsGizmoShown() const { return m_showGizmo; }
         bool IsGridShown() const { return m_showGrid; }
         bool IsAxisShown() const { return m_showAxis; }
-    public:
-        const RenderTarget& GetRenderTarget() const;
+        const IRenderTarget* GetRenderTarget() const;
     private:
-        void              AddDashedLine(std::vector<Vertex_P3_C4>& out, XMFLOAT3& a, XMFLOAT3& b, XMFLOAT4& color, float dashLen = 6.0f, float gapLen = 4.0f);
+        void              AddDashedLine(std::vector<Vertex_P3_C4>& out, Math::Float3& a, Math::Float3& b, Math::Float4& color, float dashLen = 6.0f, float gapLen = 4.0f);
         SelectionGeometry BuildSelectionGeometry( const ViewState& viewState);
         GripGeometry      BuildGripGeometry(const ViewState& vs);
         SnapGeometry      BuildSnapGeometry(const ViewState& vs);
@@ -65,13 +66,14 @@ namespace MiniCAD
         float          m_width; 
         float          m_height;
         Camera         m_camera;
-        Renderer&      m_renderer;  
+        IRenderer&     m_renderer;
         Cursor         m_cursor;
         Grid           m_grid;
         Axis           m_axis;
         Gizmo          m_gizmo;
-        RenderTarget   m_renderTarget;
-        D3D11_VIEWPORT m_d3dViewport;
+        ViewportDesc    m_viewportDesc;
+
+        std::unique_ptr<IRenderTarget> m_renderTarget;
 
         std::vector<Vertex_P3_C4> m_vertices;
         std::vector<Vertex_P3_C4> m_vertices1;  
