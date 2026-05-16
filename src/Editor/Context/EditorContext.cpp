@@ -8,15 +8,15 @@
 #include "Editor/Snap/SnapEngine.h"
 #include "Editor/Input/KeyCode.h"
 #include "Scene/Scene.h"
-
+#include "Core/Math/Point3.hpp"
 // ── 绘制工具 ──────────────────────────────────────────────────
 #include "Editor/Tools/LineTool.h"
 #include "Editor/Tools/PointTool.h"
 #include "Editor/Tools/CircleTool.h"
 #include "Editor/Tools/RectangleTool.h"
-//#include "Editor/Tools/Draw/ArcTool.h"
-//#include "Editor/Tools/Draw/EllipseTool.h"
-//#include "Editor/Tools/Draw/PolylineTool.h"
+#include "Editor/Tools/ArcTool.h"
+#include "Editor/Tools/EllipseTool.h"
+#include "Editor/Tools/PolylineTool.h"
 //#include "Editor/Tools/Draw/SplineTool.h"
 
 // ── 编辑工具 ──────────────────────────────────────────────────
@@ -71,10 +71,10 @@ namespace MiniCAD
         RegisterTool("Point",     [this] { return std::make_unique<PointTool>    (m_scene, m_cmdStack, m_viewport, m_overlay);});
         RegisterTool("Circle",    [this] { return std::make_unique<CircleTool>   (m_scene, m_cmdStack, m_viewport, m_overlay); });
         RegisterTool("Rectangle", [this] { return std::make_unique<RectangleTool>(m_scene, m_cmdStack, m_viewport, m_overlay); });
-        // RegisterTool("Arc",       [this] { return std::make_unique<ArcTool>      (m_scene, m_cmdStack, m_viewport, m_overlay);});
-       // RegisterTool("Ellipse",   [this] { return std::make_unique<EllipseTool>  (m_scene, m_cmdStack, m_viewport, m_overlay);});
-       // RegisterTool("Polyline",  [this] { return std::make_unique<PolylineTool> (m_scene, m_cmdStack, m_viewport, m_overlay);});
-       // RegisterTool("Spline",    [this] { return std::make_unique<SplineTool>   (m_scene, m_cmdStack, m_viewport, m_overlay);});
+        RegisterTool("Arc",       [this] { return std::make_unique<ArcTool>      (m_scene, m_cmdStack, m_viewport, m_overlay); });
+        RegisterTool("Ellipse",   [this] { return std::make_unique<EllipseTool>  (m_scene, m_cmdStack, m_viewport, m_overlay); });
+        RegisterTool("Polyline",  [this] { return std::make_unique<PolylineTool> (m_scene, m_cmdStack, m_viewport, m_overlay); });
+        // RegisterTool("Spline",    [this] { return std::make_unique<SplineTool>   (m_scene, m_cmdStack, m_viewport, m_overlay);});
 
         /*
       
@@ -348,14 +348,14 @@ namespace MiniCAD
         if (e.Type == InputEventType::KeyDown)
         {  
 			// A~Z 的按键进入命令缓冲，直到 Enter / Space 触发工具切换，或 Escape 清空缓冲。
-            if (e.KeyCode >= KeyCode::A && e.KeyCode <= KeyCode::Z)
+            if (e.Key >= KeyCode::A && e.Key <= KeyCode::Z)
             {
-                m_cmdBuffer += ToCommandChar(e.KeyCode);   
+                m_cmdBuffer += ToCommandChar(e.Key);   
                 printf("m_cmdBuffer: %s",m_cmdBuffer.c_str()); 
                 return true;
             }
 
-            if (e.KeyCode == KeyCode::Enter || e.KeyCode == KeyCode::Space)
+            if (e.Key == KeyCode::Enter || e.Key == KeyCode::Space)
             {
                 if (!m_cmdBuffer.empty())   // 当前命令
                 {
@@ -374,13 +374,13 @@ namespace MiniCAD
                 return true;
             }
 
-            if (e.KeyCode == KeyCode::Escape)
+            if (e.Key == KeyCode::Escape)
             {
                 m_cmdBuffer.clear();   // 清空缓冲 
 
             }
 
-            if (e.KeyCode == KeyCode::Delete)
+            if (e.Key == KeyCode::Delete)
             {
                 if (m_tool) m_tool->OnSceneChanged();
 
@@ -389,13 +389,13 @@ namespace MiniCAD
                 return true;
             }
   
-            if (e.KeyCode == KeyCode::F3) // 捕捉开关  
+            if (e.Key == KeyCode::F3) // 捕捉开关  
             {
                 ToggleSnap();
                 return true;
             }
              
-            if (e.KeyCode == KeyCode::F8) // 正交开关 
+            if (e.Key == KeyCode::F8) // 正交开关 
             {
                 ToggleOrtho();
                 return true;

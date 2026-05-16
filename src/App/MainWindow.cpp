@@ -267,45 +267,47 @@ namespace MiniCAD
 			if (bottom) return HTBOTTOM;
 
 			// 标题栏拖动
-			/*if (pt.y >= wr.top && pt.y < wr.top + 30)
+			if (pt.y >= wr.top && pt.y < wr.top + 30)
 			{
 				if (ImGui::GetCurrentContext() && ImGui::IsAnyItemHovered())
 					return HTCLIENT;
 
 				return HTCAPTION;
-			}*/
-			if (pt.y >= wr.top && pt.y < wr.top + 30)
-			{
-				if (ImGui::GetCurrentContext())
-				{
-					// 转为客户区坐标
-					POINT clientPt = pt;
-					ScreenToClient(hwnd, &clientPt);
-					ImVec2 mousePos = ImVec2((float)clientPt.x, (float)clientPt.y);
-
-					// 遍历所有 ImGui 窗口，检查鼠标是否在某个非主窗口上
-					ImGuiContext* ctx = ImGui::GetCurrentContext();
-					for (int i = 0; i < ctx->Windows.Size; i++)
-					{
-						ImGuiWindow* win = ctx->Windows[i];
-						if (!win->Active || win->Hidden)                       continue;
-						if (win->Flags & ImGuiWindowFlags_ChildWindow)         continue;
-						if (strcmp(win->Name, "MiniCAD") == 0)                 continue;
-
-						ImRect rect(win->Pos, ImVec2(win->Pos.x + win->Size.x,
-							win->Pos.y + win->Size.y));
-						if (rect.Contains(mousePos))
-							return HTCLIENT; // 鼠标在 ImGui 浮动窗口上，不拖主窗口
-					}
-
-					if (ImGui::IsAnyItemHovered())
-						return HTCLIENT;
-				}
-
-				return HTCAPTION;
 			}
 			return HTCLIENT;
 		}
+		//	if (pt.y >= wr.top && pt.y < wr.top + 30)
+		//	{
+		//		if (ImGui::GetCurrentContext())
+		//		{
+		//			// 转为客户区坐标
+		//			POINT clientPt = pt;
+		//			ScreenToClient(hwnd, &clientPt);
+		//			ImVec2 mousePos = ImVec2((float)clientPt.x, (float)clientPt.y);
+
+		//			// 遍历所有 ImGui 窗口，检查鼠标是否在某个非主窗口上
+		//			ImGuiContext* ctx = ImGui::GetCurrentContext();
+		//			for (int i = 0; i < ctx->Windows.Size; i++)
+		//			{
+		//				ImGuiWindow* win = ctx->Windows[i];
+		//				if (!win->Active || win->Hidden)                       continue;
+		//				if (win->Flags & ImGuiWindowFlags_ChildWindow)         continue;
+		//				if (strcmp(win->Name, "MiniCAD") == 0)                 continue;
+
+		//				ImRect rect(win->Pos, ImVec2(win->Pos.x + win->Size.x,
+		//					win->Pos.y + win->Size.y));
+		//				if (rect.Contains(mousePos))
+		//					return HTCLIENT; // 鼠标在 ImGui 浮动窗口上，不拖主窗口
+		//			}
+
+		//			if (ImGui::IsAnyItemHovered())
+		//				return HTCLIENT;
+		//		}
+
+		//		return HTCAPTION;
+		//	}
+		//	return HTCLIENT;
+		//}
 		case WM_GETMINMAXINFO:
 		{
 			// 告诉 Windows 最大化时覆盖哪个显示器的工作区
@@ -359,8 +361,8 @@ namespace MiniCAD
 	bool MainWindow::InitDocument(int width, int height)
 	{
 		m_docManager.Create(*m_renderer, width, height); // 创建1个文档 
-		m_docManager.Create(*m_renderer, width, height); // 创建2个文档 
-		m_docManager.Create(*m_renderer, width, height); // 创建3个文档 
+		//m_docManager.Create(*m_renderer, width, height); // 创建2个文档 
+		//m_docManager.Create(*m_renderer, width, height); // 创建3个文档 
 
 		m_docManager.SetRenderer(m_renderer.get());
 

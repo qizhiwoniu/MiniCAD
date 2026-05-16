@@ -4,7 +4,9 @@
 #include "Core/Entity/LineEntity.hpp"
 #include "Core/Entity/CircleEntity.hpp"
 #include "Core/Entity/RectangleEntity.hpp"
-#include "Core/Entity/CircleEntity.hpp"
+#include "Core/Entity/ArcEntity.hpp"
+#include "Core/Entity/EllipseEntity.hpp"
+#include "Core/Entity/PolylineEntity.hpp"
 #include "Core/Object/Object.hpp"
 #include "Core/Math/Color4.hpp"
 #include "Core/Math/Constants.hpp"
@@ -180,6 +182,80 @@ namespace MiniCAD
                     file.write((const char*)&geom.Radius, sizeof(double));  // double，与构造函数一致
 
                     const EntityAttr& attr = circle.GetAttr();
+                    file.write((const char*)&attr.Color, sizeof(Math::Color4));
+                    file.write((const char*)&attr.LayerId, sizeof(LayerID));
+                    file.write((const char*)&attr.LineType, sizeof(LineType));
+                    file.write((const char*)&attr.LineWidth, sizeof(float));
+                    file.write((const char*)&attr.Visible, sizeof(bool));
+                }
+                else if (obj.IsKindOf<ArcEntity>())
+                {
+                    uint8_t type = 5;
+                    file.write((const char*)&type, sizeof(type));
+
+                    const auto& arc = static_cast<const ArcEntity&>(obj);
+
+                    Object::ObjectID id = arc.GetID();
+                    file.write((const char*)&id, sizeof(id));
+
+                    const Arc& geom = arc.GetArc();
+                    file.write((const char*)&geom.Center, sizeof(Math::Point3));
+                    file.write((const char*)&geom.Radius, sizeof(double));
+                    file.write((const char*)&geom.StartAngle, sizeof(double));
+                    file.write((const char*)&geom.EndAngle, sizeof(double));
+
+                    const EntityAttr& attr = arc.GetAttr();
+                    file.write((const char*)&attr.Color, sizeof(Math::Color4));
+                    file.write((const char*)&attr.LayerId, sizeof(LayerID));
+                    file.write((const char*)&attr.LineType, sizeof(LineType));
+                    file.write((const char*)&attr.LineWidth, sizeof(float));
+                    file.write((const char*)&attr.Visible, sizeof(bool));
+                }
+                else if (obj.IsKindOf<EllipseEntity>())
+                {
+                    uint8_t type = 6;
+                    file.write((const char*)&type, sizeof(type));
+
+                    const auto& ellipse = static_cast<const EllipseEntity&>(obj);
+
+                    Object::ObjectID id = ellipse.GetID();
+                    file.write((const char*)&id, sizeof(id));
+
+                    const Ellipse& geom = ellipse.GetEllipse();
+                    file.write((const char*)&geom.Center, sizeof(Math::Point3));
+                    file.write((const char*)&geom.RadiusX, sizeof(double));
+                    file.write((const char*)&geom.RadiusY, sizeof(double));
+                    file.write((const char*)&geom.Rotation, sizeof(double));
+
+                    const EntityAttr& attr = ellipse.GetAttr();
+                    file.write((const char*)&attr.Color, sizeof(Math::Color4));
+                    file.write((const char*)&attr.LayerId, sizeof(LayerID));
+                    file.write((const char*)&attr.LineType, sizeof(LineType));
+                    file.write((const char*)&attr.LineWidth, sizeof(float));
+                    file.write((const char*)&attr.Visible, sizeof(bool));
+                }
+                else if (obj.IsKindOf<PolylineEntity>())
+                {
+                    uint8_t type = 7;
+                    file.write((const char*)&type, sizeof(type));
+
+                    const auto& polyline = static_cast<const PolylineEntity&>(obj);
+
+                    Object::ObjectID id = polyline.GetID();
+                    file.write((const char*)&id, sizeof(id));
+
+                    const Polyline& geom = polyline.GetPolyline();
+
+                    uint32_t pointCount = static_cast<uint32_t>(geom.Points.size());
+                    file.write((const char*)&pointCount, sizeof(uint32_t));
+                    file.write((const char*)geom.Points.data(), sizeof(Math::Point3) * pointCount);
+
+                    uint32_t bulgeCount = static_cast<uint32_t>(geom.Bulges.size());
+                    file.write((const char*)&bulgeCount, sizeof(uint32_t));
+                    if (bulgeCount > 0)
+                        file.write((const char*)geom.Bulges.data(), sizeof(double) * bulgeCount);
+
+                    const EntityAttr& attr = polyline.GetAttr();
                     file.write((const char*)&attr.Color, sizeof(Math::Color4));
                     file.write((const char*)&attr.LayerId, sizeof(LayerID));
                     file.write((const char*)&attr.LineType, sizeof(LineType));

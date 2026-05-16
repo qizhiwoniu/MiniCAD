@@ -3,6 +3,9 @@
 #include "Core/Entity/PointEntity.hpp"
 #include "Core/Entity/CircleEntity.hpp"
 #include "Core/Entity/RectangleEntity.hpp"
+#include "Core/Entity/ArcEntity.hpp"
+#include "Core/Entity/EllipseEntity.hpp"
+#include "Core/Entity/PolylineEntity.hpp"
 #include <utility>
 #include <memory>
 #include <string>
@@ -178,6 +181,76 @@ namespace MiniCAD
                 file.read((char*)&attr.Visible, sizeof(bool));
 
                 auto entity = std::make_unique<CircleEntity>(id, center, radius);
+                entity->SetAttr(attr);
+                scene.AddEntity(std::move(entity));
+            }
+            else if (type == 5) // ArcEntity
+            {
+                Math::Point3 center;
+                double radius = 0.0;
+                double startAngle = 0.0;
+                double endAngle = 0.0;
+                file.read((char*)&center, sizeof(Math::Point3));
+                file.read((char*)&radius, sizeof(double));
+                file.read((char*)&startAngle, sizeof(double));
+                file.read((char*)&endAngle, sizeof(double));
+
+                EntityAttr attr;
+                file.read((char*)&attr.Color, sizeof(Math::Color4));
+                file.read((char*)&attr.LayerId, sizeof(LayerID));
+                file.read((char*)&attr.LineType, sizeof(LineType));
+                file.read((char*)&attr.LineWidth, sizeof(float));
+                file.read((char*)&attr.Visible, sizeof(bool));
+
+                auto entity = std::make_unique<ArcEntity>(id, center, radius, startAngle, endAngle);
+                entity->SetAttr(attr);
+                scene.AddEntity(std::move(entity));
+            }
+            else if (type == 6) // EllipseEntity
+            {
+                Math::Point3 center;
+                double rx = 0.0;
+                double ry = 0.0;
+                double rotation = 0.0;
+                file.read((char*)&center, sizeof(Math::Point3));
+                file.read((char*)&rx, sizeof(double));
+                file.read((char*)&ry, sizeof(double));
+                file.read((char*)&rotation, sizeof(double));
+
+                EntityAttr attr;
+                file.read((char*)&attr.Color, sizeof(Math::Color4));
+                file.read((char*)&attr.LayerId, sizeof(LayerID));
+                file.read((char*)&attr.LineType, sizeof(LineType));
+                file.read((char*)&attr.LineWidth, sizeof(float));
+                file.read((char*)&attr.Visible, sizeof(bool));
+
+                auto entity = std::make_unique<EllipseEntity>(id, center, rx, ry, rotation);
+                entity->SetAttr(attr);
+                scene.AddEntity(std::move(entity));
+            }
+            else if (type == 7) // PolylineEntity
+            {
+                uint32_t pointCount = 0;
+                file.read((char*)&pointCount, sizeof(uint32_t));
+
+                std::vector<Math::Point3> points(pointCount);
+                file.read((char*)points.data(), sizeof(Math::Point3) * pointCount);
+
+                uint32_t bulgeCount = 0;
+                file.read((char*)&bulgeCount, sizeof(uint32_t));
+
+                std::vector<double> bulges(bulgeCount);
+                if (bulgeCount > 0)
+                    file.read((char*)bulges.data(), sizeof(double) * bulgeCount);
+
+                EntityAttr attr;
+                file.read((char*)&attr.Color, sizeof(Math::Color4));
+                file.read((char*)&attr.LayerId, sizeof(LayerID));
+                file.read((char*)&attr.LineType, sizeof(LineType));
+                file.read((char*)&attr.LineWidth, sizeof(float));
+                file.read((char*)&attr.Visible, sizeof(bool));
+
+                auto entity = std::make_unique<PolylineEntity>(id, std::move(points), std::move(bulges));
                 entity->SetAttr(attr);
                 scene.AddEntity(std::move(entity));
             }
