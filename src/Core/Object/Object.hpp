@@ -12,7 +12,7 @@ namespace MiniCAD
 		ObjectID GetID() const { return m_id; }
 		void     SetID(ObjectID id) { m_id = id; }
 
-
+		virtual ~Object() = default;   // ← 新增，必须有
 		virtual const RuntimeTypeInfo* GetTypeInfo() const = 0;
 
 		template<typename T>

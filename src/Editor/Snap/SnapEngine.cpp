@@ -16,6 +16,26 @@
 #include <unordered_set>
 
 namespace MiniCAD{
+    namespace
+    {
+        // 候选点与光标的屏幕距离，满足阈值则更新 best
+        inline void TryUpdateBest(const Math::Point3& worldPt,
+            const Math::Point2& sp,
+            const Camera& cam,
+            double snapRadiusPx,
+            double& bestDist,
+            SnapResult& best,
+            SnapResult::Type type,
+            Object::ObjectID id)
+        {
+            double d = Math::Distance(sp, cam.WorldToScreen(worldPt));
+            if (d < snapRadiusPx && d < bestDist)
+            {
+                bestDist = d;
+                best = { type, worldPt, id };
+            }
+        }
+    }
 
     // ─── 主入口，返回第一个有效结果─────────────────────────────────────────────────────────────── 
     SnapResult SnapEngine::Query(const Math::Point2& sp, const Scene& scene, const Camera& cam,
@@ -294,7 +314,7 @@ namespace MiniCAD{
 
         return best;
     }
-    // 
+ 
     // ─── Intersection ─────────────────────────────────────────────────────────
     SnapResult SnapEngine::TryIntersection(const Math::Point2& sp, const Scene& scene, const Camera& cam,
         const std::unordered_set<Object::ObjectID>& exclude) const

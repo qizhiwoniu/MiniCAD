@@ -8,6 +8,10 @@
 #include "Core/GeomKernel/Circle.hpp"
 #include "Core/GeomKernel/Line.hpp"
 #include "Core/GeomKernel/Rectangle.hpp"
+#include "Core/GeomKernel/Arc.hpp"
+#include "Core/GeomKernel/Ellipse.hpp"
+#include "Core/GeomKernel/Polyline.hpp"
+#include "Core/GeomKernel/Spline.hpp" 
 #include "Editor/Viewport/Viewport.h"
 
 namespace MiniCAD
@@ -58,11 +62,28 @@ namespace MiniCAD
             Line,
             Point,
             Circle,
-            Rectangle    
+            Rectangle,
+            Arc,
+            Ellipse,
+            Polyline,
+            Spline,
         } Kind;
-
+        Math::Point3   BeforePoint;
+        Math::Point3   AfterPoint; 
         Line    BeforeLine;
         Line    AfterLine;
+
+        Arc      BeforeArc;
+        Arc      AfterArc;
+
+        Ellipse  BeforeEllipse;
+        Ellipse  AfterEllipse;
+
+        Polyline BeforePolyline;
+        Polyline AfterPolyline;
+
+        Spline   BeforeSpline;
+        Spline   AfterSpline;
 
         Circle  BeforeCircle;
         Circle  AfterCircle;
@@ -70,8 +91,7 @@ namespace MiniCAD
         Rectangle      BeforeRect;  //  新增
         Rectangle      AfterRect;   //  新增
 
-        Math::Point3   BeforePoint;
-        Math::Point3   AfterPoint; 
+        
 
     };
 

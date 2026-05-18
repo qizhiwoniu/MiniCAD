@@ -18,7 +18,7 @@ namespace MiniCAD
 		using DirtyCallback = std::function<void()>;
 
 		Scene() = default;
-
+		
 		void AddEntity(std::unique_ptr<Object> entity);       // 添加实体 	
 		std::unique_ptr<Object> RemoveEntity(ObjectID id); 	  // 移除并返回所有权（供 Undo 使用）
 		  

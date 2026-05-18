@@ -8,7 +8,6 @@
 #include "Core/Entity/RectangleEntity.hpp"
 #include "Core/Math/Point3.hpp"
 #include "Editor/Grip/GripType.h"
-#include "Scene/Scene.h"
 #include <memory>
 
 namespace MiniCAD
@@ -27,7 +26,6 @@ namespace MiniCAD
             Apply(scene, /*useAfter=*/true);
             return true;
         }
-
 
         void Undo(Scene& scene) override
         {

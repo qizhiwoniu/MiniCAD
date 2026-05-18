@@ -6,6 +6,7 @@
 #include "Core/Entity/ArcEntity.hpp"
 #include "Core/Entity/EllipseEntity.hpp"
 #include "Core/Entity/PolylineEntity.hpp"
+#include "Core/Entity/SplineEntity.hpp"
 #include <utility>
 #include <memory>
 #include <string>
@@ -251,6 +252,28 @@ namespace MiniCAD
                 file.read((char*)&attr.Visible, sizeof(bool));
 
                 auto entity = std::make_unique<PolylineEntity>(id, std::move(points), std::move(bulges));
+                entity->SetAttr(attr);
+                scene.AddEntity(std::move(entity));
+            }
+            else if (type == 8) // SplineEntity
+            {
+                uint32_t fitPointCount = 0;
+                file.read((char*)&fitPointCount, sizeof(uint32_t));
+
+                std::vector<Math::Point3> fitPoints(fitPointCount);
+                file.read((char*)fitPoints.data(), sizeof(Math::Point3) * fitPointCount);
+
+                SplineBoundary boundary;
+                file.read((char*)&boundary, sizeof(SplineBoundary));
+
+                EntityAttr attr;
+                file.read((char*)&attr.Color, sizeof(Math::Color4));
+                file.read((char*)&attr.LayerId, sizeof(LayerID));
+                file.read((char*)&attr.LineType, sizeof(LineType));
+                file.read((char*)&attr.LineWidth, sizeof(float));
+                file.read((char*)&attr.Visible, sizeof(bool));
+
+                auto entity = std::make_unique<SplineEntity>(id, std::move(fitPoints), boundary);
                 entity->SetAttr(attr);
                 scene.AddEntity(std::move(entity));
             }

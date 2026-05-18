@@ -7,6 +7,7 @@
 #include "Core/Entity/ArcEntity.hpp"
 #include "Core/Entity/EllipseEntity.hpp"
 #include "Core/Entity/PolylineEntity.hpp"
+#include "Core/Entity/SplineEntity.hpp"
 #include "Core/Object/Object.hpp"
 #include "Core/Math/Color4.hpp"
 #include "Core/Math/Constants.hpp"
@@ -256,6 +257,31 @@ namespace MiniCAD
                         file.write((const char*)geom.Bulges.data(), sizeof(double) * bulgeCount);
 
                     const EntityAttr& attr = polyline.GetAttr();
+                    file.write((const char*)&attr.Color, sizeof(Math::Color4));
+                    file.write((const char*)&attr.LayerId, sizeof(LayerID));
+                    file.write((const char*)&attr.LineType, sizeof(LineType));
+                    file.write((const char*)&attr.LineWidth, sizeof(float));
+                    file.write((const char*)&attr.Visible, sizeof(bool));
+                }
+                else if (obj.IsKindOf<SplineEntity>())
+                {
+                    uint8_t type = 8;
+                    file.write((const char*)&type, sizeof(type));
+
+                    const auto& splineEntity = static_cast<const SplineEntity&>(obj);
+
+                    Object::ObjectID id = splineEntity.GetID();
+                    file.write((const char*)&id, sizeof(id));
+
+                    const Spline& geom = splineEntity.GetSpline();
+
+                    uint32_t fitPointCount = static_cast<uint32_t>(geom.FitPoints.size());
+                    file.write((const char*)&fitPointCount, sizeof(uint32_t));
+                    file.write((const char*)geom.FitPoints.data(), sizeof(Math::Point3) * fitPointCount);
+
+                    file.write((const char*)&geom.Boundary, sizeof(SplineBoundary));
+
+                    const EntityAttr& attr = splineEntity.GetAttr();
                     file.write((const char*)&attr.Color, sizeof(Math::Color4));
                     file.write((const char*)&attr.LayerId, sizeof(LayerID));
                     file.write((const char*)&attr.LineType, sizeof(LineType));

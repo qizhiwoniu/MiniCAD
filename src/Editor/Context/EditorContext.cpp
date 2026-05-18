@@ -17,11 +17,11 @@
 #include "Editor/Tools/ArcTool.h"
 #include "Editor/Tools/EllipseTool.h"
 #include "Editor/Tools/PolylineTool.h"
-//#include "Editor/Tools/Draw/SplineTool.h"
+#include "Editor/Tools/SplineTool.h"
 
 // ── 编辑工具 ──────────────────────────────────────────────────
-//#include "Editor/Tools/Modify/MoveTool.h"
-//#include "Editor/Tools/Modify/CopyTool.h"
+#include "Editor/Tools/Modify/MoveTool.h"
+#include "Editor/Tools/Modify/CopyTool.h"
 //#include "Editor/Tools/Modify/MirrorTool.h"
 //#include "Editor/Tools/Modify/RotateTool.h"
 
@@ -74,23 +74,34 @@ namespace MiniCAD
         RegisterTool("Arc",       [this] { return std::make_unique<ArcTool>      (m_scene, m_cmdStack, m_viewport, m_overlay); });
         RegisterTool("Ellipse",   [this] { return std::make_unique<EllipseTool>  (m_scene, m_cmdStack, m_viewport, m_overlay); });
         RegisterTool("Polyline",  [this] { return std::make_unique<PolylineTool> (m_scene, m_cmdStack, m_viewport, m_overlay); });
-        // RegisterTool("Spline",    [this] { return std::make_unique<SplineTool>   (m_scene, m_cmdStack, m_viewport, m_overlay);});
+        RegisterTool("Spline",    [this] { return std::make_unique<SplineTool>   (m_scene, m_cmdStack, m_viewport, m_overlay);});
 
-        /*
+        
       
         // ── 编辑工具 ──────────────────────────────────────────
         // 工厂内部检查选择集，空时返回 nullptr，ActivateToolById 会静默忽略
-        RegisterTool("Move", [this] -> std::unique_ptr<ITool> {
+        RegisterTool("Move", [this]() -> std::unique_ptr<ITool> {
             auto targets = GetSelectedObjects();
-            if (targets.empty()) return nullptr;
-            return std::make_unique<MoveTool>(targets, m_scene, m_cmdStack, m_viewport, m_overlay);
-        });
-        RegisterTool("Copy", [this] -> std::unique_ptr<ITool> {
+            if (targets.empty())
+            {
+                printf("[Editor] Move: 请先选择对象\n");
+                return nullptr;
+            }
+            return std::make_unique<MoveTool>(std::move(targets),
+                m_scene, m_cmdStack, m_viewport, m_overlay);
+            });
+
+        RegisterTool("Copy", [this]() -> std::unique_ptr<ITool> {
             auto targets = GetSelectedObjects();
-            if (targets.empty()) return nullptr;
-            return std::make_unique<CopyTool>(targets, m_scene, m_cmdStack, m_viewport, m_overlay);
-        });
-        RegisterTool("Mirror", [this] -> std::unique_ptr<ITool> {
+            if (targets.empty())
+            {
+                printf("[Editor] Copy: 请先选择对象\n");
+                return nullptr;
+            }
+            return std::make_unique<CopyTool>(std::move(targets),
+                m_scene, m_cmdStack, m_viewport, m_overlay);
+            });
+       /* RegisterTool("Mirror", [this] -> std::unique_ptr<ITool> {
             auto targets = GetSelectedObjects();
             if (targets.empty()) return nullptr;
             return std::make_unique<MirrorTool>(targets, m_scene, m_cmdStack, m_viewport, m_overlay);
@@ -267,7 +278,22 @@ namespace MiniCAD
     {
         UpdateSnap(inputEvent);
         InputEvent e = InjectSnap(inputEvent);
-
+        // ── 0. 键盘事件：工具优先，不消费再走全局 ────────────────────────
+        //
+        //   PolylineTool 等工具需要响应 A / L / C / Z 等按键切换模式。
+        //   必须在 HandleGlobal 之前给工具处理机会，
+        //   否则 HandleGlobal 的命令缓冲会把这些键吃掉。
+        //
+        if (e.Type == InputEventType::KeyDown || e.Type == InputEventType::KeyUp)
+        {
+            if (m_tool && !m_toolSuspended)
+            {
+                if (m_tool->OnInput(e))
+                    return true;    // 工具消费了，结束
+            }
+            // 工具不消费（或无工具），交给全局处理
+            return HandleGlobal(e);
+        }
         // 1. 全局快捷键（Undo / Redo / Cancel / 工具切换 / 视图操作）
         if (HandleGlobal(e))
             return true;
