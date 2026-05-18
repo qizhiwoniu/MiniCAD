@@ -2,6 +2,7 @@
 #include "pch.h"
 #include "ImGuiLayer.h"
 #include "Editor/Input/ViewportInput.h"
+#include "Render/IRenderer.h"
 #include <imgui.h>
 #include <memory>
 #include <string>
@@ -50,7 +51,7 @@ namespace MiniCAD
 
         const ViewportInput& GetViewportInput() const { return m_viewportInput; }
         Tool GetActiveTool() const { return m_activeTool; }
-
+        void SetRenderer(IRenderer* renderer) { m_renderer = renderer; }
     private:
         void DrawMenubar     (DocumentManager& dm);    
         void DrawToolbar     (DocumentManager& dm);
@@ -75,5 +76,7 @@ namespace MiniCAD
 
         bool               m_showLayerMgr = false;   // g_showLayerMgr 改为成员变量
         bool               m_showAxisGrid = false;
+
+        IRenderer* m_renderer = nullptr;
     };
 }

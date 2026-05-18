@@ -23,6 +23,14 @@ namespace MiniCAD
         virtual void* GetNativeDevice() override;
  
         ID3D11Device* GetDevice() { return m_device; }
+        void SetClearColor(float r, float g, float b, float a = 1.0f)override
+        {
+            m_clearColor[0] = r;
+            m_clearColor[1] = g;
+            m_clearColor[2] = b;
+            m_clearColor[3] = a;
+        }
+
     private:
         void Initialize();
 
@@ -34,7 +42,7 @@ namespace MiniCAD
         ComPtr<ID3D11Buffer> m_cb;
 
         int m_maxVertices = 65536;
-
+        float m_clearColor[4] = { 0.1f, 0.1f, 0.15f, 1.0f }; // 默认深蓝灰
         // ===== states =====
         ComPtr<ID3D11DepthStencilState> m_depthEnabled;
         ComPtr<ID3D11DepthStencilState> m_depthDisabled;

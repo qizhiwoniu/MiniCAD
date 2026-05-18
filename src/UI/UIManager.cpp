@@ -384,6 +384,8 @@ namespace MiniCAD
             ImU32       iconCol = IM_COL32(255, 255, 255, 255);
             const float iconSize = 10.f;
             // ── 按钮 ───────────────────────────────────────────
+            static bool s_showSettings = false;
+            static float s_bgColor[3] = { 0.1f, 0.1f, 0.15f };
             ImGui::Button("##menu", ImVec2(btnW, 0.f));
             ImVec2 center = RectCenter(ImGui::GetItemRectMin(), ImGui::GetItemRectSize());
             DrawDropdownIcon(dl, center, iconSize, iconCol);
@@ -401,7 +403,7 @@ namespace MiniCAD
                 }
                 if (ImGui::MenuItem("设置"))
                 {
-                    // TODO
+                    s_showSettings = true;
                 }
                 ImGui::Separator();
                 if (ImGui::MenuItem("退出"))
@@ -411,6 +413,37 @@ namespace MiniCAD
                 ImGui::EndPopup();
             }
             ImGui::SameLine(0.f, gap);
+            if (s_showSettings)
+            {
+                ImGuiIO& io = ImGui::GetIO();
+                ImGui::SetNextWindowPos(
+                    ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f),
+                    ImGuiCond_Appearing,   // 只在窗口出现时设置一次
+                    ImVec2(0.5f, 0.5f)    // pivot 中心点
+                );
+                ImGui::SetNextWindowSize(ImVec2(480, 160), ImGuiCond_Appearing);
+                ImGui::Begin("设置", &s_showSettings);
+
+                ImGui::Text("背景颜色");
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                if (ImGui::Button("默认  ##bg", ImVec2(70, 28)))
+                    m_renderer->SetClearColor(0.1f, 0.1f, 0.15f);
+                ImGui::SameLine();
+                if (ImGui::Button("黑色  ##bg", ImVec2(70, 28)))
+                    m_renderer->SetClearColor(0.0f, 0.0f, 0.0f);
+                ImGui::SameLine();
+                if (ImGui::ColorEdit3("自定义##bg", s_bgColor))
+                    m_renderer->SetClearColor(s_bgColor[0], s_bgColor[1], s_bgColor[2]);
+                ImGui::Spacing();
+                ImGui::Separator();
+
+                // 可选：显示当前颜色预览
+                // g_renderer 需要暴露 GetClearColor() 或你自己存一份 state
+
+                ImGui::End();
+            }
             // ── 最小化 ───────────────────────────────────────────
             ImGui::Button("##min", ImVec2(btnW, 0.f));
             DrawMinimizeIcon(dl, RectCenter(ImGui::GetItemRectMin(), ImGui::GetItemRectSize()), iconSize, iconCol);

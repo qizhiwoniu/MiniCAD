@@ -28,5 +28,6 @@ namespace MiniCAD
         virtual void EndFrame  () = 0; 
         virtual void Submit    (std::span<const Vertex_P3_C4> verts, const Math::Mat4& viewProj, PrimitiveType  type, bool depth = true, bool blend = false) = 0; 
         virtual void* GetNativeDevice() = 0;
+        virtual void SetClearColor(float r, float g, float b, float a = 1.0f) = 0;
     };
 }

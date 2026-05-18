@@ -82,8 +82,8 @@ namespace MiniCAD
     {  
         auto& d3dTarget = static_cast<D3D11RenderTarget&>(target);
         auto* rtv       = static_cast<ID3D11RenderTargetView*>(d3dTarget.GetNativeHandle());
-
-        float clear[4] = { 0.1f, 0.1f, 0.15f, 1.0f }; 
+     
+        //float clear[4] = { 0.1f, 0.1f, 0.15f, 1.0f }; 
         auto pso       = m_lineShader.GetPipeline(); 
 
         D3D11_VIEWPORT d3dVp = {};
@@ -97,7 +97,7 @@ namespace MiniCAD
 
         m_context->RSSetViewports(1, &d3dVp);
         m_context->OMSetRenderTargets(1, &rtv, nullptr); // nullptr 深度缓冲区
-        m_context->ClearRenderTargetView(rtv, clear);    // 清空
+        m_context->ClearRenderTargetView(rtv, m_clearColor);   // 清空
         m_context->IASetInputLayout(pso.layout);
         m_context->VSSetShader(pso.shader->vs.Get(), nullptr, 0);
         m_context->PSSetShader(pso.shader->ps.Get(), nullptr, 0);

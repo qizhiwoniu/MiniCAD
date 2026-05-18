@@ -338,6 +338,7 @@ namespace MiniCAD
 
 	bool MainWindow::InitD3D11(int width, int height)
 	{
+
 		// 1. 硬件设备（D3D11 专属）
 		m_device = std::make_unique<Device>();
 		m_device->Initialize();
@@ -354,7 +355,7 @@ namespace MiniCAD
 		info.device = m_device->GetDevice();
 		info.context = m_device->GetContext();
 		m_renderer = CreateRenderer(info);
-		
+		m_uiManager.SetRenderer(m_renderer.get());
 		return m_renderer != nullptr;
 	}
 	 

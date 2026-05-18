@@ -3,7 +3,7 @@
 ; Non-commercial use only
 
 #define MyAppName "miniCAD"
-#define MyAppVersion "1.1.0"
+#define MyAppVersion "1.1.1"
 #define MyAppPublisher "余鹏"
 #define MyAppURL "https://github.com/qizhiwoniu"
 #define MyAppExeName "miniCAD.exe"
