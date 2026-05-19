@@ -89,6 +89,15 @@ namespace MiniCAD
         {
             auto id   = m_scene.NextObjectID(); 
             auto line = std::make_unique<LineEntity>(id, a, b); 
+            // ★ 写入图层颜色
+            const auto& lm = m_scene.GetLayerManager();
+            const auto& layer = lm.GetActiveLayer();
+            auto        color = layer.GetColor();
+            line->SetLayerId(lm.GetActiveLayerID());
+            auto attr = line->GetAttr();
+            attr.Color = layer.GetColor();
+            line->SetAttr(attr);
+
             auto cmd  = std::make_unique<AddEntityCommand>(std::move(line));
 
             m_cmdStack.Execute(std::move(cmd), m_scene);

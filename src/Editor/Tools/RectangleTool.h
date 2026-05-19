@@ -99,6 +99,13 @@ namespace MiniCAD
         {
             auto id   = m_scene.NextObjectID();
             auto rect = std::make_unique<RectangleEntity>(id, a, b);
+            // ★ 写入图层颜色
+            const auto& layer = m_scene.GetLayerManager().GetActiveLayer();
+            auto layerId = m_scene.GetLayerManager().GetActiveLayerID();
+            rect->SetLayerId(layerId);
+            auto attr = rect->GetAttr();
+            attr.Color = layer.GetColor();
+            rect->SetAttr(attr);
             auto cmd  = std::make_unique<AddEntityCommand>(std::move(rect));  
 
             m_cmdStack.Execute(std::move(cmd), m_scene); 

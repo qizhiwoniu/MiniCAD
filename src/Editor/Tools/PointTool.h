@@ -95,7 +95,13 @@ namespace MiniCAD
             auto id = m_scene.NextObjectID();
 
             auto pointEntity = std::make_unique<PointEntity>(id, p);
-
+            // ★ 写入图层颜色
+            const auto& layer = m_scene.GetLayerManager().GetActiveLayer();
+            auto layerId = m_scene.GetLayerManager().GetActiveLayerID();
+            pointEntity->SetLayerId(layerId);
+            auto attr = pointEntity->GetAttr();
+            attr.Color = layer.GetColor();
+            pointEntity->SetAttr(attr);
             auto cmd = std::make_unique<AddEntityCommand>(std::move(pointEntity));
             m_cmdStack.Execute(std::move(cmd), m_scene);
 

@@ -31,7 +31,7 @@ namespace MiniCAD
     private:
         LayerID            m_id = 0;
         std::string        m_name;
-        Math::Color4       m_color{ 1,1,1,1 };
+        Math::Color4       m_color{ 0.8f, 0.8f, 0.8f, 1.0f };
         bool               m_visible = true;
         bool               m_locked = false;
     };

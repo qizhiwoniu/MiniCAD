@@ -1046,6 +1046,7 @@ namespace MiniCAD
             {
                 for (auto* obj : selected)
                 {
+                    auto* entity = static_cast<Entity*>(obj);
                     if (obj->IsKindOf<Entity>())
                         static_cast<Entity*>(obj)->SetLayerId(lm.GetActiveLayerID());
                 }
@@ -1455,6 +1456,11 @@ namespace MiniCAD
                 calcRange(vMin, vMax, hMin, hMax);
 
                 auto& scene =  dm.GetActive()->GetScene();   //doc.GetScene();
+                auto doc = dm.GetActive();
+                auto& lm = doc->GetLayerManager();
+                auto layerId = lm.GetActiveLayerID();
+                // ★ 拿到当前图层颜色
+                Layer* activeLayer = lm.GetLayer(layerId);
                 for (auto& a : axes)
                 {
                     if (!a.visible) continue;
@@ -1486,6 +1492,13 @@ namespace MiniCAD
                     auto doc =  dm.GetActive();
 				    auto layerId =  doc->GetLayerManager().GetActiveLayerID();
 					line->SetLayerId(layerId); // 默认图层
+                    // 同时把图层颜色写入线实体，让渲染器直接读颜色字段
+                    if (activeLayer)
+                    {
+                        auto attr = line->GetAttr();
+                        attr.Color = activeLayer->GetColor();  // 用图层颜色
+                        line->SetAttr(attr);
+                    }
                     scene.AddEntity(std::move(line));
                 }
                 m_showAxisGrid = false;

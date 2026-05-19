@@ -116,6 +116,13 @@ namespace MiniCAD
         {
             auto id = m_scene.NextObjectID();
             auto circle = std::make_unique<CircleEntity>(id, center, radius);
+            // ★ 写入图层颜色
+            const auto& layer = m_scene.GetLayerManager().GetActiveLayer();
+            auto layerId = m_scene.GetLayerManager().GetActiveLayerID();
+            circle->SetLayerId(layerId);
+            auto attr = circle->GetAttr();
+            attr.Color = layer.GetColor();
+            circle->SetAttr(attr);
             auto cmd = std::make_unique<AddEntityCommand>(std::move(circle));
             m_cmdStack.Execute(std::move(cmd), m_scene);
             printf("圆 Id %d  center(%.3f,%.3f)  r=%.3f\n",

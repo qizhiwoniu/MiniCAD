@@ -22,8 +22,8 @@
 // ── 编辑工具 ──────────────────────────────────────────────────
 #include "Editor/Tools/Modify/MoveTool.h"
 #include "Editor/Tools/Modify/CopyTool.h"
-//#include "Editor/Tools/Modify/MirrorTool.h"
-//#include "Editor/Tools/Modify/RotateTool.h"
+#include "Editor/Tools/Modify/MirrorTool.h"
+#include "Editor/Tools/Modify/RotateTool.h"
 
 // ── 几何编辑工具 ──────────────────────────────────────────────
 //#include "Editor/Tools/Modify/TrimTool.h"
@@ -101,17 +101,29 @@ namespace MiniCAD
             return std::make_unique<CopyTool>(std::move(targets),
                 m_scene, m_cmdStack, m_viewport, m_overlay);
             });
-       /* RegisterTool("Mirror", [this] -> std::unique_ptr<ITool> {
+        RegisterTool("Mirror", [this]() -> std::unique_ptr<ITool> {
             auto targets = GetSelectedObjects();
-            if (targets.empty()) return nullptr;
-            return std::make_unique<MirrorTool>(targets, m_scene, m_cmdStack, m_viewport, m_overlay);
-        });
-        RegisterTool("Rotate", [this] -> std::unique_ptr<ITool> {
-            auto targets = GetSelectedObjects();
-            if (targets.empty()) return nullptr;
-            return std::make_unique<RotateTool>(targets, m_scene, m_cmdStack, m_viewport, m_overlay);
-        });
+            if (targets.empty())
+            {
+                printf("[Editor] Mirror: 请先选择对象\n");
+                return nullptr;
+            }
+            return std::make_unique<MirrorTool>(std::move(targets),
+                m_scene, m_cmdStack, m_viewport, m_overlay);
+            });
 
+        RegisterTool("Rotate", [this]() -> std::unique_ptr<ITool> {
+            auto targets = GetSelectedObjects();
+            if (targets.empty())
+            {
+                printf("[Editor] Rotate: 请先选择对象\n");
+                return nullptr;
+            }
+            return std::make_unique<RotateTool>(std::move(targets),
+                m_scene, m_cmdStack, m_viewport, m_overlay);
+            });
+
+/* 
         // ── 几何编辑工具 ──────────────────────────────────────
         RegisterTool("Trim", [this]{
             return std::make_unique<TrimTool>(m_scene, m_cmdStack, m_viewport, m_overlay);
@@ -126,24 +138,23 @@ namespace MiniCAD
         */
 
         // ── 快捷键绑定 ──────────────────────────────────────── 
-        RegisterAlias("L",   "Line");
-        RegisterAlias("LI",  "Line");
-        RegisterAlias("P",   "Polyline");
-        RegisterAlias("PL",  "Polyline");
-        RegisterAlias("MI",  "Mirror");
-        RegisterAlias("RO",  "Rotate"); 
-        RegisterAlias("PT",  "Point");       
-        RegisterAlias("C",   "Circle");
-        RegisterAlias("A",   "Arc");
-        RegisterAlias("EL",  "Ellipse");
-        RegisterAlias("SP",  "Spline");
-        RegisterAlias("M",   "Move");
-        RegisterAlias("CO",  "Copy");
-        RegisterAlias("MI",  "Mirror");
-        RegisterAlias("RO",  "Rotate");
-        RegisterAlias("TR",  "Trim");
-        RegisterAlias("EX",  "Extend");
-        RegisterAlias("BR",  "Break");
+        RegisterAlias("P", "Previous");
+        RegisterAlias("L", "Line");
+        RegisterAlias("LI", "Line");
+        RegisterAlias("REC", "Rectangle");
+        RegisterAlias("PL", "Polyline");
+        RegisterAlias("MI", "Mirror");
+        RegisterAlias("RO", "Rotate");
+        RegisterAlias("PT", "Point");
+        RegisterAlias("C", "Circle");
+        RegisterAlias("ARC", "Arc");
+        RegisterAlias("EL", "Ellipse");
+        RegisterAlias("SP", "Spline");
+        RegisterAlias("M", "Move");
+        RegisterAlias("CO", "Copy");
+        RegisterAlias("TR", "Trim");
+        RegisterAlias("EX", "Extend");
+        RegisterAlias("BR", "Break");
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -161,14 +172,29 @@ namespace MiniCAD
 
     void EditorContext::ActivateToolByAlias(const std::string& alias)
     {
-        auto it = m_aliasRegistry.find(alias);
-        if (it == m_aliasRegistry.end())
+        // 特殊命令：恢复上次选择
+        if (alias == "Previous" || alias == "PREVIOUS")
         {
-            printf("[Editor] Unknown command: %s\n", alias.c_str());
+            m_picking.RestoreLastSelection();
+            m_gripEditor.MarkDirty();
             return;
         }
 
-        ActivateToolById(it->second);
+        auto it = m_aliasRegistry.find(alias);
+        if (it != m_aliasRegistry.end())
+        {
+            ActivateToolById(it->second);
+            return;
+        }
+
+        // 找不到别名，直接尝试作为 toolId
+        if (m_toolRegistry.contains(alias))
+        {
+            ActivateToolById(alias);
+            return;
+        }
+
+        printf("[Editor] Unknown command: %s\n", alias.c_str());
     }
 
     char EditorContext::ToCommandChar(KeyCode key)
@@ -188,6 +214,14 @@ namespace MiniCAD
      
     void EditorContext::ActivateToolById(const std::string& toolId)
     {
+        // 特殊命令拦截
+        if (toolId == "Previous")
+        {
+            m_picking.RestoreLastSelection();
+            m_gripEditor.MarkDirty();
+            return;
+        }
+
         auto it = m_toolRegistry.find(toolId);
         if (it == m_toolRegistry.end())
         {
@@ -204,6 +238,7 @@ namespace MiniCAD
         }
 
         printf("[Editor] Start %s\n", toolId.c_str());
+        m_lastCommand = toolId;
         ActivateTool(std::move(tool));
     }
 
@@ -291,8 +326,18 @@ namespace MiniCAD
                 if (m_tool->OnInput(e))
                     return true;    // 工具消费了，结束
             }
-            // 工具不消费（或无工具），交给全局处理
-            return HandleGlobal(e);
+            //  交给全局处理 
+            if (HandleGlobal(e))
+                return true;
+
+            // HandleGlobal 不消费时，让 Picking 处理（如 Esc 清空选择）
+            if (m_picking.OnInput(e))
+            {
+                m_gripEditor.MarkDirty();
+                return true;
+            }
+
+            return false;
         }
         // 1. 全局快捷键（Undo / Redo / Cancel / 工具切换 / 视图操作）
         if (HandleGlobal(e))

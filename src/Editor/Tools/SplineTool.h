@@ -220,6 +220,13 @@ namespace MiniCAD
 
             auto id     = m_scene.NextObjectID();
             auto entity = std::make_unique<SplineEntity>(id, m_fitPoints, boundary);
+            // ★ 写入图层颜色
+            const auto& layer = m_scene.GetLayerManager().GetActiveLayer();
+            auto layerId = m_scene.GetLayerManager().GetActiveLayerID();
+            entity->SetLayerId(layerId);
+            auto attr = entity->GetAttr();
+            attr.Color = layer.GetColor();
+            entity->SetAttr(attr);
             auto cmd    = std::make_unique<AddEntityCommand>(std::move(entity));
             m_cmdStack.Execute(std::move(cmd), m_scene);
 
